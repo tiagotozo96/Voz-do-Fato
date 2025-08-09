@@ -26,11 +26,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const menuHamburguer = document.querySelector('.menu-hamburguer');
     const menuLista = document.querySelector('.menu-lista');
     const searchIcon = document.querySelector('.search-icon');
-    const searchModal = document.getElementById('search-modal');
-    const closeSearch = document.getElementById('close-search');
-    const scrollToTopBtn = document.getElementById('scroll-to-top');
+    
+    // Novo seletor para o container do campo de busca
+    const searchInputContainer = document.querySelector('.search-input-container');
     const searchButton = document.getElementById('search-button');
     const searchInput = document.getElementById('search-input');
+    
+    const scrollToTopBtn = document.getElementById('scroll-to-top');
 
     // --- Funções de Funcionalidade ---
 
@@ -46,9 +48,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
 
         const newsArray = Object.values(newsData);
-        if (newsArray.length >= 12) {
-            // Separa as notícias para renderização (agora com verificação)
-            const noticiaPrincipal = newsArray[0];
+        // Condição corrigida: agora renderiza se houver alguma notícia
+        if (newsArray.length > 0) {
+            // Separa as notícias para renderização de forma flexível
+            const noticiaPrincipal = newsArray[0] || {};
             const noticiasCards = newsArray.slice(1, 5);
             const noticiasGrandes = newsArray.slice(5, 7);
             const noticiasPequenas = newsArray.slice(7, 12);
@@ -56,76 +59,82 @@ document.addEventListener('DOMContentLoaded', async () => {
             const noticiasCultura = newsArray.filter(n => n.categoria && n.categoria.toLowerCase() === 'cultura').slice(0, 4);
 
             // Seção principal
-            homePageContent += `
-                <section class="grid-noticias-novo">
-                    <article class="noticia-principal">
-                        <img src="${noticiaPrincipal.urlImagem}" alt="Imagem da notícia principal">
-                        <div class="info-overlay">
-                            <span class="categoria">${noticiaPrincipal.categoria}</span>
-                            <h2><a href="#noticia-completa?id=${noticiaPrincipal.id}">${noticiaPrincipal.titulo}</a></h2>
-                            <p>${noticiaPrincipal.autor} - ${noticiaPrincipal.data}</p>
-                        </div>
-                    </article>
-                    <div class="noticia-card-grid">
-                        ${noticiasCards.map(news => `
-                            <article class="noticia-card">
-                                <img src="${news.urlImagem}" alt="Descrição da imagem do card">
-                                <div class="info-overlay">
-                                    <span class="categoria">${news.categoria}</span>
-                                    <h4><a href="#noticia-completa?id=${news.id}">${news.titulo}</a></h4>
-                                </div>
-                            </article>
-                        `).join('')}
-                    </div>
-                </section>
-            `;
-
-            // Seção de grid inferior
-            homePageContent += `
-                <section class="grid-inferior">
-                    ${noticiasGrandes.map(news => `
-                        <article class="card-grande">
-                            <img src="${news.urlImagem}" alt="Imagem da notícia">
+            if (noticiaPrincipal && noticiaPrincipal.titulo) {
+                homePageContent += `
+                    <section class="grid-noticias-novo">
+                        <article class="noticia-principal">
+                            <img src="${noticiaPrincipal.urlImagem}" alt="Imagem da notícia principal">
                             <div class="info-overlay">
-                                <span class="categoria">${news.categoria}</span>
-                                <h4><a href="#noticia-completa?id=${news.id}">${news.titulo}</a></h4>
-                                <p>${news.autor} - ${news.data}</p>
+                                <span class="categoria">${noticiaPrincipal.categoria}</span>
+                                <h2><a href="#noticia-completa?id=${noticiaPrincipal.id}">${noticiaPrincipal.titulo}</a></h2>
+                                <p>${noticiaPrincipal.autor} - ${noticiaPrincipal.data}</p>
                             </div>
                         </article>
-                    `).join('')}
-                    ${noticiasPequenas.map(news => `
-                        <article class="card-pequeno">
-                            <img src="${news.urlImagem}" alt="Imagem da notícia">
-                            <div class="info-overlay">
-                                <span class="categoria">${news.categoria}</span>
-                                <h5><a href="#noticia-completa?id=${news.id}">${news.titulo}</a></h5>
-                            </div>
-                        </article>
-                    `).join('')}
-                </section>
-            `;
-
-            // Seção de cultura
-            homePageContent += `
-                <section class="secao-cultura">
-                    <div class="secao-titulo">
-                        <h3>CULTURA E LAZER</h3>
-                    </div>
-                    <div class="conteudo-com-anuncio">
-                        <div class="grid-cultura">
-                            ${noticiasCultura.map(news => `
-                                <article class="noticia-cultura">
-                                    <img src="${news.urlImagem}" alt="Imagem da notícia">
+                        <div class="noticia-card-grid">
+                            ${noticiasCards.map(news => `
+                                <article class="noticia-card">
+                                    <img src="${news.urlImagem}" alt="Descrição da imagem do card">
                                     <div class="info-overlay">
+                                        <span class="categoria">${news.categoria}</span>
                                         <h4><a href="#noticia-completa?id=${news.id}">${news.titulo}</a></h4>
-                                        <p>${news.autor} - ${news.data}</p>
                                     </div>
                                 </article>
                             `).join('')}
                         </div>
-                    </div>
-                </section>
-            `;
+                    </section>
+                `;
+            }
+
+            // Seção de grid inferior
+            if (noticiasGrandes.length > 0 || noticiasPequenas.length > 0) {
+                homePageContent += `
+                    <section class="grid-inferior">
+                        ${noticiasGrandes.map(news => `
+                            <article class="card-grande">
+                                <img src="${news.urlImagem}" alt="Imagem da notícia">
+                                <div class="info-overlay">
+                                    <span class="categoria">${news.categoria}</span>
+                                    <h4><a href="#noticia-completa?id=${news.id}">${news.titulo}</a></h4>
+                                    <p>${news.autor} - ${news.data}</p>
+                                </div>
+                            </article>
+                        `).join('')}
+                        ${noticiasPequenas.map(news => `
+                            <article class="card-pequeno">
+                                <img src="${news.urlImagem}" alt="Imagem da notícia">
+                                <div class="info-overlay">
+                                    <span class="categoria">${news.categoria}</span>
+                                    <h5><a href="#noticia-completa?id=${news.id}">${news.titulo}</a></h5>
+                                </div>
+                            </article>
+                        `).join('')}
+                    </section>
+                `;
+            }
+
+            // Seção de cultura
+            if (noticiasCultura.length > 0) {
+                homePageContent += `
+                    <section class="secao-cultura">
+                        <div class="secao-titulo">
+                            <h3>CULTURA E LAZER</h3>
+                        </div>
+                        <div class="conteudo-com-anuncio">
+                            <div class="grid-cultura">
+                                ${noticiasCultura.map(news => `
+                                    <article class="noticia-cultura">
+                                        <img src="${news.urlImagem}" alt="Imagem da notícia">
+                                        <div class="info-overlay">
+                                            <h4><a href="#noticia-completa?id=${news.id}">${news.titulo}</a></h4>
+                                            <p>${news.autor} - ${news.data}</p>
+                                        </div>
+                                    </article>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </section>
+                `;
+            }
         }
 
         mainContentArea.innerHTML = homePageContent;
@@ -205,31 +214,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         menuLista.classList.toggle('active');
     });
 
-    // Modal de Pesquisa
+    // Lógica para o novo campo de busca
+    const searchInputContainer = document.querySelector('.search-input-container');
+    const searchButton = document.getElementById('search-button');
+    const searchInput = document.getElementById('search-input');
+
     searchIcon.addEventListener('click', () => {
-        searchModal.classList.add('show');
-        searchInput.focus();
-    });
-
-    closeSearch.addEventListener('click', () => {
-        searchModal.classList.remove('show');
-    });
-
-    searchModal.addEventListener('click', (event) => {
-        if (event.target === searchModal) {
-            searchModal.classList.remove('show');
+        searchInputContainer.classList.toggle('active');
+        if (searchInputContainer.classList.contains('active')) {
+            searchInput.focus();
         }
     });
 
+    // Botão de busca
     searchButton.addEventListener('click', () => {
         const searchTerm = searchInput.value.trim();
         if (searchTerm) {
-            // Em um projeto real, você faria uma busca no Firestore aqui
             alert(`Você pesquisou por: "${searchTerm}"`);
-            searchModal.classList.remove('show');
+            searchInputContainer.classList.remove('active');
             searchInput.value = '';
         } else {
             alert('Por favor, digite algo para pesquisar.');
+        }
+    });
+    
+    // Esconde o campo de busca se o usuário clicar fora dele
+    document.addEventListener('click', (event) => {
+        if (!event.target.closest('.search-icon') && !event.target.closest('.search-input-container')) {
+            searchInputContainer.classList.remove('active');
         }
     });
 

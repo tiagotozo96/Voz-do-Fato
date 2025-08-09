@@ -17,6 +17,7 @@ body {
     line-height: 1.6;
     color: var(--text-color);
     background-color: var(--light-gray);
+    overflow-x: hidden; /* Adiciona esta linha para remover a barra de rolagem horizontal */
 }
 
 a {
@@ -101,6 +102,8 @@ img {
 .menu-navegacao {
     background-color: var(--primary-color);
     padding: 10px 0;
+    position: relative;
+    z-index: 1001; /* Z-index para manter o menu sobre o conteúdo */
 }
 
 .menu-container {
@@ -153,7 +156,46 @@ img {
     font-size: 1.2em;
     cursor: pointer;
     padding: 5px;
+    margin-left: auto; /* Empurra o ícone de busca para a direita */
 }
+
+/* Novo estilo para o campo de busca que se expande */
+.search-input-container {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 100%;
+    max-width: 400px;
+    background-color: var(--white);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    padding: 10px;
+    display: none; /* Oculta por padrão */
+    z-index: 1000;
+}
+
+/* Mostra o campo de busca quando ativo */
+.search-input-container.active {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.search-input-container input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.search-input-container button {
+    background-color: var(--primary-color);
+    color: var(--white);
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
 
 /* Conteúdo Principal */
 .conteudo-principal {
@@ -162,6 +204,8 @@ img {
     padding: 0 20px;
     display: grid;
     gap: 20px;
+    position: relative;
+    z-index: 900;
 }
 
 .tendencia-agora {
@@ -188,9 +232,10 @@ img {
     flex-grow: 1;
 }
 
+/* Alteração para a nova grade de notícias */
 .grid-noticias-novo {
     display: grid;
-    grid-template-columns: 2fr 1fr; /* Principal e cards menores */
+    grid-template-columns: repeat(2, 1fr); /* Divide em 2 colunas */
     gap: 20px;
 }
 
@@ -199,12 +244,14 @@ img {
     overflow: hidden;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    grid-column: span 2; /* Ocupa as 2 colunas para o card principal */
+    height: 380px; /* Altura do card principal */
 }
 
 .noticia-principal img {
     width: 100%;
-    height: 100%; /* Ajusta a altura para preencher o container */
-    object-fit: cover; /* Garante que a imagem cubra a área sem distorcer */
+    height: 100%;
+    object-fit: cover;
     transition: transform 0.3s ease;
 }
 
@@ -254,7 +301,7 @@ img {
 
 .noticia-card-grid {
     display: grid;
-    grid-template-columns: 1fr; /* Uma coluna para cards menores */
+    grid-template-columns: 1fr;
     gap: 20px;
 }
 
@@ -268,7 +315,7 @@ img {
 
 .noticia-card img {
     width: 100%;
-    height: 180px; /* Altura fixa para os cards menores */
+    height: 180px;
     object-fit: cover;
     transition: transform 0.3s ease;
 }
@@ -309,7 +356,7 @@ img {
 
 .grid-inferior {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* 2 colunas grandes + 5 pequenas */
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 20px;
 }
 
@@ -318,12 +365,12 @@ img {
     overflow: hidden;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    grid-column: span 2; /* Ocupa 2 colunas em telas maiores */
+    grid-column: span 2;
 }
 
 .card-grande img {
     width: 100%;
-    height: 250px; /* Altura fixa para cards grandes */
+    height: 250px;
     object-fit: cover;
     transition: transform 0.3s ease;
 }
@@ -382,7 +429,7 @@ img {
 
 .card-pequeno img {
     width: 120px;
-    height: 100%; /* Ajusta a altura da imagem para preencher o card */
+    height: 100%;
     object-fit: cover;
 }
 
@@ -435,7 +482,7 @@ img {
 
 .conteudo-com-anuncio {
     display: grid;
-    grid-template-columns: 1fr; /* Uma coluna por padrão */
+    grid-template-columns: 1fr;
     gap: 20px;
 }
 
@@ -634,7 +681,7 @@ img {
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease, visibility 0.3s ease;
@@ -819,17 +866,22 @@ img {
 
     .menu-hamburguer {
         display: block; /* Mostra o hamburguer em mobile */
+        z-index: 1001; /* Garante que o botão do menu esteja sempre visível */
     }
 
     .menu-lista {
+        list-style: none;
+        margin: 0;
+        padding: 0;
         display: none; /* Esconde o menu por padrão */
         flex-direction: column;
         width: 100%;
         background-color: var(--primary-color);
-        position: absolute;
+        position: fixed; /* Altera de 'absolute' para 'fixed' */
         left: 0;
-        top: 100%; /* Abaixo do menu-navegacao */
+        top: 100px; /* Alinhe abaixo do cabeçalho fixo */
         box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+        z-index: 1000; /* Z-index alto para sobrepor o conteúdo */
     }
 
     .menu-lista.active {

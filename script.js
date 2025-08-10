@@ -30,6 +30,107 @@ const cache = {
     CACHE_DURATION: 5 * 60 * 1000 // 5 minutos
 };
 
+// ========== VERIFICAÇÃO DE ELEMENTOS DOM - NOVO ==========
+const checkRequiredElements = () => {
+    const requiredElements = [
+        'main-content-area',
+        'loading-overlay', 
+        'error-modal',
+        'error-title',
+        'error-message',
+        'error-close',
+        'data-atual',
+        'breadcrumb-list'
+    ];
+    
+    const missingElements = requiredElements.filter(id => !document.getElementById(id));
+    
+    if (missingElements.length > 0) {
+        console.error('❌ Elementos DOM ausentes:', missingElements);
+        
+        // Criar elementos ausentes automaticamente
+        missingElements.forEach(id => {
+            const element = document.createElement('div');
+            element.id = id;
+            
+            // Configurações específicas por elemento
+            switch(id) {
+                case 'loading-overlay':
+                    element.className = 'loading-overlay hidden';
+                    element.innerHTML = `
+                        <div class="loading-spinner">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Carregando...</p>
+                        </div>
+                    `;
+                    element.setAttribute('aria-hidden', 'true');
+                    document.body.appendChild(element);
+                    break;
+                    
+                case 'error-modal':
+                    element.className = 'modal';
+                    element.innerHTML = `
+                        <div class="modal-content">
+                            <h2 id="error-title">Erro</h2>
+                            <p id="error-message"></p>
+                            <button id="error-close" class="button-primary">Fechar</button>
+                        </div>
+                    `;
+                    element.setAttribute('role', 'dialog');
+                    element.setAttribute('aria-hidden', 'true');
+                    document.body.appendChild(element);
+                    break;
+                    
+                case 'breadcrumb-list':
+                    element.innerHTML = '<li><span>Início</span></li>';
+                    const nav = document.querySelector('.breadcrumb') || document.createElement('nav');
+                    if (!document.querySelector('.breadcrumb')) {
+                        nav.className = 'breadcrumb';
+                        nav.setAttribute('aria-label', 'Breadcrumb');
+                        nav.innerHTML = `<ol id="breadcrumb-list">${element.innerHTML}</ol>`;
+                        const main = document.getElementById('main-content-area');
+                        if (main) {
+                            main.parentNode.insertBefore(nav, main);
+                        }
+                    }
+                    break;
+                    
+                case 'data-atual':
+                    element.textContent = new Date().toLocaleDateString('pt-BR');
+                    const topBar = document.querySelector('.top-social-info');
+                    if (topBar) {
+                        topBar.insertBefore(element, topBar.firstChild);
+                    }
+                    break;
+                    
+                default:
+                    // Para outros elementos, apenas adicionar ao body
+                    if (!document.getElementById(id)) {
+                        document.body.appendChild(element);
+                    }
+            }
+        });
+        
+        console.log('✅ Elementos DOM ausentes foram criados automaticamente');
+    }
+};
+
+// ========== SERVICE WORKER PARA CACHE - CORRIGIDO ==========
+const setupServiceWorker = () => {
+    // Só registra se estiver em servidor (não file://)
+    if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
+        navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+                console.log('Service Worker registrado:', registration);
+            })
+            .catch(error => {
+                console.log('Erro ao registrar Service Worker:', error);
+            });
+    } else {
+        console.log('Service Worker não suportado ou executando via file://');
+    }
+};
+
 // ========== UTILITÁRIOS - NOVO ==========
 const Utils = {
     // Função para sanitizar HTML e prevenir XSS
@@ -266,6 +367,10 @@ const highlightSearchTerm = (text, term) => {
 
 // ========== FUNÇÕES PRINCIPAIS - MELHORADAS ==========
 document.addEventListener('DOMContentLoaded', async () => {
+    
+    // Verificar e criar elementos DOM ausentes primeiro
+    checkRequiredElements();
+    
     // Elementos do DOM
     const elements = {
         mainContentArea: document.getElementById('main-content-area'),
@@ -280,13 +385,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         dataAtual: document.getElementById('data-atual')
     };
 
-    // Verificar se elementos existem
+    // Verificar se elementos existem após criação automática
     const missingElements = Object.entries(elements)
         .filter(([key, element]) => !element)
         .map(([key]) => key);
 
     if (missingElements.length > 0) {
-        console.error('Elementos DOM não encontrados:', missingElements);
+        console.error('Elementos DOM críticos não encontrados:', missingElements);
         ErrorManager.show('Erro ao carregar a página. Alguns elementos não foram encontrados.');
         return;
     }
@@ -642,72 +747,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // ========== FUNÇÕES DE COMPARTILHAMENTO - NOVO ==========
-    window.compartilharFacebook = (newsId) => {
-        const news = newsData[newsId];
-        if (!news) return;
-        
-        const url = encodeURIComponent(`${window.location.origin}${window.location.pathname}#noticia-completa?id=${newsId}`);
-        window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'width=600,height=400');
-    };
-
-    window.compartilharTwitter = (newsId) => {
-        const news = newsData[newsId];
-        if (!news) return;
-        
-        const text = encodeURIComponent(`${news.titulo} - via @vozdofato`);
-        const url = encodeURIComponent(`${window.location.origin}${window.location.pathname}#noticia-completa?id=${newsId}`);
-        window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'width=600,height=400');
-    };
-
-    window.compartilharWhatsapp = (newsId) => {
-        const news = newsData[newsId];
-        if (!news) return;
-        
-        const text = encodeURIComponent(`${news.titulo}\n\nLeia mais: ${window.location.origin}${window.location.pathname}#noticia-completa?id=${newsId}`);
-        window.open(`https://wa.me/?text=${text}`, '_blank');
-    };
-
-    // ========== RENDERIZAÇÃO DE PÁGINAS - MELHORADA ==========
-    const renderPage = (pageName, params = {}) => {
-        if (isLoading) return;
-        
-        currentPage = pageName;
-        
-        try {
-            if (pageName === 'home') {
-                renderHomePage();
-            } else if (pageName === 'noticia-completa') {
-                renderNoticiaCompleta(params.id);
-            } else if (pageName.startsWith('categoria-')) {
-                const categoria = pageName.replace('categoria-', '').replace('-', ' ');
-                renderCategoria(categoria);
-            } else {
-                // Página não encontrada
-                elements.mainContentArea.innerHTML = `
-                    <div class="page-not-found">
-                        <h1>Página Não Encontrada</h1>
-                        <p>A página que você procura não existe.</p>
-                        <a href="#home" class="button-primary">Voltar ao Início</a>
-                    </div>
-                `;
-            }
-            
-            addLinkInterceptors();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            
-            // Fechar menu mobile
-            if (window.innerWidth <= 768) {
-                elements.menuLista.classList.remove('active');
-                AccessibilityManager.updateAriaExpanded(elements.menuHamburguer, false);
-            }
-            
-        } catch (error) {
-            console.error(`Erro ao renderizar página ${pageName}:`, error);
-            ErrorManager.show('Erro ao carregar a página');
-        }
-    };
-
     // ========== RENDERIZAÇÃO POR CATEGORIA - NOVO ==========
     const renderCategoria = (categoria) => {
         const newsArray = Object.values(newsData)
@@ -760,142 +799,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             { title: categoria.toUpperCase(), url: '' }
         ]);
     };
-
-    // ========== INTERCEPTAÇÃO DE LINKS - MELHORADA ==========
-    const addLinkInterceptors = () => {
-        document.querySelectorAll('a[href^="#"]').forEach(link => {
-            link.removeEventListener('click', handleInternalLinkClick);
-            link.addEventListener('click', handleInternalLinkClick);
-        });
-    };
-
-    const handleInternalLinkClick = (event) => {
-        const href = event.currentTarget.getAttribute('href');
-        
-        if (!href || !href.startsWith('#')) return;
-        
-        event.preventDefault();
-
-        try {
-            const [page, queryString] = href.substring(1).split('?');
-            const params = {};
-            
-            if (queryString) {
-                queryString.split('&').forEach(param => {
-                    const [key, value] = param.split('=');
-                    params[key] = decodeURIComponent(value);
-                });
-            }
-            
-            renderPage(page, params);
-            
-        } catch (error) {
-            console.error('Erro ao processar link:', error);
-            renderPage('home'); // Fallback para home
-        }
-    };
-
-    // ========== ATUALIZAR DATA ATUAL - NOVO ==========
-    function updateCurrentDate() {
-        if (elements.dataAtual) {
-            const now = new Date();
-            const options = {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            };
-            
-            const dateString = now.toLocaleDateString('pt-BR', options);
-            elements.dataAtual.textContent = dateString;
-        }
-    }
-
-    // ========== EVENT LISTENERS - MELHORADOS ==========
-    
-    // Menu Hamburguer com acessibilidade
-    elements.menuHamburguer.addEventListener('click', () => {
-        const isActive = elements.menuLista.classList.contains('active');
-        elements.menuLista.classList.toggle('active');
-        AccessibilityManager.updateAriaExpanded(elements.menuHamburguer, !isActive);
-        
-        if (!isActive) {
-            AccessibilityManager.announceToScreenReader('Menu aberto');
-            // Foco no primeiro item do menu
-            const firstMenuItem = elements.menuLista.querySelector('a');
-            if (firstMenuItem) {
-                setTimeout(() => firstMenuItem.focus(), 100);
-            }
-        } else {
-            AccessibilityManager.announceToScreenReader('Menu fechado');
-        }
-    });
-
-    // Fechar menu com ESC
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            if (elements.menuLista.classList.contains('active')) {
-                elements.menuLista.classList.remove('active');
-                AccessibilityManager.updateAriaExpanded(elements.menuHamburguer, false);
-                elements.menuHamburguer.focus();
-            }
-            
-            if (elements.searchInputContainer.classList.contains('active')) {
-                elements.searchInputContainer.classList.remove('active');
-                AccessibilityManager.updateAriaExpanded(elements.searchIcon, false);
-                elements.searchIcon.focus();
-            }
-            
-            ErrorManager.hide();
-        }
-    });
-
-    // Campo de busca com acessibilidade
-    elements.searchIcon.addEventListener('click', () => {
-        const isActive = elements.searchInputContainer.classList.contains('active');
-        elements.searchInputContainer.classList.toggle('active');
-        AccessibilityManager.updateAriaExpanded(elements.searchIcon, !isActive);
-        
-        if (!isActive) {
-            setTimeout(() => {
-                elements.searchInput.focus();
-                AccessibilityManager.announceToScreenReader('Campo de busca aberto');
-            }, 100);
-        }
-    });
-
-    // Busca com debounce e melhorias
-    const performSearch = Utils.debounce((searchTerm) => {
-        if (!searchTerm.trim()) {
-            ErrorManager.show('Por favor, digite algo para pesquisar.', 'Campo Vazio');
-            return;
-        }
-        
-        const results = Object.values(newsData).filter(news =>
-            news.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            news.categoria.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (news.conteudo && news.conteudo.toLowerCase().includes(searchTerm.toLowerCase()))
-        );
-        
-        renderSearchResults(searchTerm, results);
-        elements.searchInputContainer.classList.remove('active');
-        elements.searchInput.value = '';
-        
-        AccessibilityManager.announceToScreenReader(
-            `Busca realizada. ${results.length} resultado${results.length !== 1 ? 's' : ''} encontrado${results.length !== 1 ? 's' : ''}`
-        );
-    }, 300);
-
-    elements.searchButton.addEventListener('click', () => {
-        performSearch(elements.searchInput.value);
-    });
-
-    elements.searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            performSearch(elements.searchInput.value);
-        }
-    });
 
     // ========== RENDERIZAÇÃO DE RESULTADOS DE BUSCA - NOVO ==========
     const renderSearchResults = (searchTerm, results) => {
@@ -954,12 +857,188 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    // ========== INTERCEPTAÇÃO DE LINKS - MELHORADA ==========
+    const addLinkInterceptors = () => {
+        document.querySelectorAll('a[href^="#"]').forEach(link => {
+            link.removeEventListener('click', handleInternalLinkClick);
+            link.addEventListener('click', handleInternalLinkClick);
+        });
+    };
+
+    const handleInternalLinkClick = (event) => {
+        const href = event.currentTarget.getAttribute('href');
+        
+        if (!href || !href.startsWith('#')) return;
+        
+        event.preventDefault();
+
+        try {
+            const [page, queryString] = href.substring(1).split('?');
+            const params = {};
+            
+            if (queryString) {
+                queryString.split('&').forEach(param => {
+                    const [key, value] = param.split('=');
+                    params[key] = decodeURIComponent(value);
+                });
+            }
+            
+            renderPage(page, params);
+            
+        } catch (error) {
+            console.error('Erro ao processar link:', error);
+            renderPage('home'); // Fallback para home
+        }
+    };
+
+    // ========== RENDERIZAÇÃO DE PÁGINAS - MELHORADA ==========
+    const renderPage = (pageName, params = {}) => {
+        if (isLoading) return;
+        
+        currentPage = pageName;
+        
+        try {
+            if (pageName === 'home') {
+                renderHomePage();
+            } else if (pageName === 'noticia-completa') {
+                renderNoticiaCompleta(params.id);
+            } else if (pageName.startsWith('categoria-')) {
+                const categoria = pageName.replace('categoria-', '').replace('-', ' ');
+                renderCategoria(categoria);
+            } else {
+                // Página não encontrada
+                elements.mainContentArea.innerHTML = `
+                    <div class="page-not-found">
+                        <h1>Página Não Encontrada</h1>
+                        <p>A página que você procura não existe.</p>
+                        <a href="#home" class="button-primary">Voltar ao Início</a>
+                    </div>
+                `;
+            }
+            
+            addLinkInterceptors();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // Fechar menu mobile
+            if (window.innerWidth <= 768) {
+                elements.menuLista.classList.remove('active');
+                AccessibilityManager.updateAriaExpanded(elements.menuHamburguer, false);
+            }
+            
+        } catch (error) {
+            console.error(`Erro ao renderizar página ${pageName}:`, error);
+            ErrorManager.show('Erro ao carregar a página');
+        }
+    };
+
+    // ========== ATUALIZAR DATA ATUAL - NOVO ==========
+    function updateCurrentDate() {
+        if (elements.dataAtual) {
+            const now = new Date();
+            const options = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            };
+            
+            const dateString = now.toLocaleDateString('pt-BR', options);
+            elements.dataAtual.textContent = dateString;
+        }
+    }
+
+    // ========== EVENT LISTENERS - MELHORADOS ==========
+    
+    // Menu Hamburguer com acessibilidade
+    elements.menuHamburguer?.addEventListener('click', () => {
+        const isActive = elements.menuLista.classList.contains('active');
+        elements.menuLista.classList.toggle('active');
+        AccessibilityManager.updateAriaExpanded(elements.menuHamburguer, !isActive);
+        
+        if (!isActive) {
+            AccessibilityManager.announceToScreenReader('Menu aberto');
+            // Foco no primeiro item do menu
+            const firstMenuItem = elements.menuLista.querySelector('a');
+            if (firstMenuItem) {
+                setTimeout(() => firstMenuItem.focus(), 100);
+            }
+        } else {
+            AccessibilityManager.announceToScreenReader('Menu fechado');
+        }
+    });
+
+    // Fechar menu com ESC
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (elements.menuLista?.classList.contains('active')) {
+                elements.menuLista.classList.remove('active');
+                AccessibilityManager.updateAriaExpanded(elements.menuHamburguer, false);
+                elements.menuHamburguer?.focus();
+            }
+            
+            if (elements.searchInputContainer?.classList.contains('active')) {
+                elements.searchInputContainer.classList.remove('active');
+                AccessibilityManager.updateAriaExpanded(elements.searchIcon, false);
+                elements.searchIcon?.focus();
+            }
+            
+            ErrorManager.hide();
+        }
+    });
+
+    // Campo de busca com acessibilidade
+    elements.searchIcon?.addEventListener('click', () => {
+        const isActive = elements.searchInputContainer.classList.contains('active');
+        elements.searchInputContainer.classList.toggle('active');
+        AccessibilityManager.updateAriaExpanded(elements.searchIcon, !isActive);
+        
+        if (!isActive) {
+            setTimeout(() => {
+                elements.searchInput?.focus();
+                AccessibilityManager.announceToScreenReader('Campo de busca aberto');
+            }, 100);
+        }
+    });
+
+    // Busca com debounce e melhorias
+    const performSearch = Utils.debounce((searchTerm) => {
+        if (!searchTerm.trim()) {
+            ErrorManager.show('Por favor, digite algo para pesquisar.', 'Campo Vazio');
+            return;
+        }
+        
+        const results = Object.values(newsData).filter(news =>
+            news.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            news.categoria.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (news.conteudo && news.conteudo.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+        
+        renderSearchResults(searchTerm, results);
+        elements.searchInputContainer.classList.remove('active');
+        elements.searchInput.value = '';
+        
+        AccessibilityManager.announceToScreenReader(
+            `Busca realizada. ${results.length} resultado${results.length !== 1 ? 's' : ''} encontrado${results.length !== 1 ? 's' : ''}`
+        );
+    }, 300);
+
+    elements.searchButton?.addEventListener('click', () => {
+        performSearch(elements.searchInput.value);
+    });
+
+    elements.searchInput?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            performSearch(elements.searchInput.value);
+        }
+    });
+
     // ========== CLIQUE FORA PARA FECHAR - MELHORADO ==========
     document.addEventListener('click', (event) => {
         // Fechar busca se clicar fora
         if (!event.target.closest('.search-icon') && 
             !event.target.closest('.search-input-container')) {
-            elements.searchInputContainer.classList.remove('active');
+            elements.searchInputContainer?.classList.remove('active');
             AccessibilityManager.updateAriaExpanded(elements.searchIcon, false);
         }
         
@@ -967,7 +1046,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!event.target.closest('.menu-hamburguer') && 
             !event.target.closest('.menu-lista') &&
             window.innerWidth <= 768) {
-            elements.menuLista.classList.remove('active');
+            elements.menuLista?.classList.remove('active');
             AccessibilityManager.updateAriaExpanded(elements.menuHamburguer, false);
         }
     });
@@ -978,14 +1057,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         clearTimeout(scrollTimeout);
         scrollTimeout = setTimeout(() => {
             if (window.scrollY > 300) {
-                elements.scrollToTopBtn.classList.add('show');
+                elements.scrollToTopBtn?.classList.add('show');
             } else {
-                elements.scrollToTopBtn.classList.remove('show');
+                elements.scrollToTopBtn?.classList.remove('show');
             }
         }, 100); // Debounce do scroll
     });
 
-    elements.scrollToTopBtn.addEventListener('click', () => {
+    elements.scrollToTopBtn?.addEventListener('click', () => {
         window.scrollTo({
             top: 0,
             behavior: 'smooth'
@@ -1001,7 +1080,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ========== MODAL DE ERRO - MELHORADO ==========
-    elements.errorClose.addEventListener('click', () => {
+    elements.errorClose?.addEventListener('click', () => {
         ErrorManager.hide();
     });
 
@@ -1019,7 +1098,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 's':
                 case 'S':
                     e.preventDefault();
-                    elements.searchIcon.click();
+                    elements.searchIcon?.click();
                     break;
             }
         }
@@ -1058,21 +1137,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     setupLazyLoading();
-
-    // ========== SERVICE WORKER PARA CACHE - NOVO ==========
-    const setupServiceWorker = () => {
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
-                .then(registration => {
-                    console.log('Service Worker registrado:', registration);
-                })
-                .catch(error => {
-                    console.log('Erro ao registrar Service Worker:', error);
-                });
-        }
-    };
-
-    setupServiceWorker();
 
     // ========== MONITORAMENTO DE PERFORMANCE - NOVO ==========
     const monitorPerformance = () => {
@@ -1119,15 +1183,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Aqui você pode integrar com Google Analytics, etc.
         console.log(`Página visitada: ${page}`);
         
-        // Exemplo básico de tracking local
-        if (localStorage) {
-            try {
+        // Exemplo básico de tracking local (removido localStorage para evitar problemas)
+        try {
+            if (typeof Storage !== 'undefined') {
                 const views = JSON.parse(localStorage.getItem('pageViews') || '{}');
                 views[page] = (views[page] || 0) + 1;
                 localStorage.setItem('pageViews', JSON.stringify(views));
-            } catch (error) {
-                console.error('Erro ao salvar analytics:', error);
             }
+        } catch (error) {
+            console.error('Erro ao salvar analytics:', error);
         }
     };
 
@@ -1148,9 +1212,38 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setupAutoRefresh();
 
+    // Inicializar Service Worker
+    setupServiceWorker();
+
     console.log('🎉 Voz do Fato carregado com sucesso! Todas as melhorias implementadas.');
     console.log('📊 Recursos ativos: Acessibilidade, Performance, SEO, Cache, Service Worker');
 });
+
+// ========== FUNÇÕES DE COMPARTILHAMENTO - GLOBAIS ==========
+window.compartilharFacebook = (newsId) => {
+    const news = newsData[newsId];
+    if (!news) return;
+    
+    const url = encodeURIComponent(`${window.location.origin}${window.location.pathname}#noticia-completa?id=${newsId}`);
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'width=600,height=400');
+};
+
+window.compartilharTwitter = (newsId) => {
+    const news = newsData[newsId];
+    if (!news) return;
+    
+    const text = encodeURIComponent(`${news.titulo} - via @vozdofato`);
+    const url = encodeURIComponent(`${window.location.origin}${window.location.pathname}#noticia-completa?id=${newsId}`);
+    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'width=600,height=400');
+};
+
+window.compartilharWhatsapp = (newsId) => {
+    const news = newsData[newsId];
+    if (!news) return;
+    
+    const text = encodeURIComponent(`${news.titulo}\n\nLeia mais: ${window.location.origin}${window.location.pathname}#noticia-completa?id=${newsId}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+};
 
 // ========== ESTILOS ADICIONAIS PARA COMPONENTES NOVOS - CSS INLINE ==========
 const additionalStyles = `
@@ -1322,5 +1415,11 @@ const additionalStyles = `
     </style>
 `;
 
-// Adicionar estilos ao head
-document.head.insertAdjacentHTML('beforeend', additionalStyles);
+// Adicionar estilos ao head quando DOM estiver pronto
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        document.head.insertAdjacentHTML('beforeend', additionalStyles);
+    });
+} else {
+    document.head.insertAdjacentHTML('beforeend', additionalStyles);
+}

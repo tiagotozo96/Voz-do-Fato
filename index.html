@@ -102,7 +102,7 @@
                      loading="eager"> <!-- Eager pois é logo -->
             </a>
             <div class="banner-publicidade">
-                <img src="https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/banner.png" 
+                <img src="https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/tereos.png"
                      alt="Banner de Publicidade" 
                      loading="lazy">
             </div>
@@ -305,5 +305,23 @@
             document.getElementById('current-year').textContent = new Date().getFullYear();
         });
     </script>
+
+<!-- Loading overlay -->
+<div id="loading-overlay" class="loading-overlay hidden" aria-hidden="true">
+    <div class="loading-spinner">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>Carregando notícias...</p>
+    </div>
+</div>
+
+<!-- Modal de erro -->
+<div id="error-modal" class="modal" role="dialog" aria-hidden="true">
+    <div class="modal-content">
+        <h2 id="error-title">Erro</h2>
+        <p id="error-message"></p>
+        <button id="error-close" class="button-primary">Fechar</button>
+    </div>
+</div>
+
 </body>
 </html>

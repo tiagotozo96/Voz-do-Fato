@@ -1,114 +1,250 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voz do Fato</title>
+    
+    <!-- Meta tags para SEO - NOVO -->
+    <meta name="description" content="Voz do Fato - Portal de notícias rápidas e confiáveis do Brasil. Notícias de Cidade, Política, Economia, Cultura e mais.">
+    <meta name="keywords" content="notícias, brasil, cidade, política, economia, cultura, olimpia">
+    <meta name="author" content="Voz do Fato">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://vozdofato.com.br">
+    
+    <!-- Open Graph para redes sociais - NOVO -->
+    <meta property="og:title" content="Voz do Fato - Portal de Notícias">
+    <meta property="og:description" content="Portal de notícias rápidas e confiáveis do Brasil">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://vozdofato.com.br">
+    <meta property="og:image" content="https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/voz-do-fato.png">
+    
+    <!-- Twitter Cards - NOVO -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Voz do Fato - Portal de Notícias">
+    <meta name="twitter:description" content="Portal de notícias rápidas e confiáveis do Brasil">
+    
+    <!-- Favicon e tema - NOVO -->
+    <meta name="theme-color" content="#c0392b">
+    <link rel="icon" href="https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/voz-do-fato.png" type="image/png">
+    
+    <title>Voz do Fato - Portal de Notícias</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link rel="stylesheet" href="style.css"> <!-- Link para o seu arquivo CSS -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Preload para performance - NOVO -->
+    <link rel="preload" href="style.css" as="style">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://www.gstatic.com">
 </head>
 <body>
+    <!-- Skip Link para acessibilidade - NOVO -->
+    <a href="#main-content-area" class="skip-link">Pular para o conteúdo principal</a>
+    
+    <!-- Loading overlay - NOVO -->
+    <div id="loading-overlay" class="loading-overlay" aria-hidden="true">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Carregando notícias...</p>
+        </div>
+    </div>
 
     <header class="novo-cabecalho">
         <div class="top-social-bar">
             <div class="top-social-inner">
                 <div class="social-icons">
-                    <a href="https://www.facebook.com/profile.php?id=61578725159841" target="_blank"><i class="fab fa-facebook-f"></i></a>
-                    <a href="https://www.instagram.com/vozdofato/" target="_blank"><i class="fab fa-instagram"></i></a>
-                    <a href="#" target="_blank"><i class="fab fa-twitter"></i></a>
-                    <a href="#" target="_blank"><i class="fab fa-youtube"></i></a>
-                    <a href="#" target="_blank"><i class="fab fa-pinterest-p"></i></a>
-                    <a href="#" ><i class="fab fa-whatsapp"></i></a>
+                    <!-- Links com melhor acessibilidade - MELHORADO -->
+                    <a href="https://www.facebook.com/profile.php?id=61578725159841" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       aria-label="Siga-nos no Facebook">
+                        <i class="fab fa-facebook-f" aria-hidden="true"></i>
+                    </a>
+                    <a href="https://www.instagram.com/vozdofato/" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       aria-label="Siga-nos no Instagram">
+                        <i class="fab fa-instagram" aria-hidden="true"></i>
+                    </a>
+                    <a href="#" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       aria-label="Siga-nos no Twitter">
+                        <i class="fab fa-twitter" aria-hidden="true"></i>
+                    </a>
+                    <a href="#" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       aria-label="Inscreva-se no nosso canal do YouTube">
+                        <i class="fab fa-youtube" aria-hidden="true"></i>
+                    </a>
+                    <a href="#" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       aria-label="Siga-nos no Pinterest">
+                        <i class="fab fa-pinterest-p" aria-hidden="true"></i>
+                    </a>
+                    <a href="#" aria-label="Contate-nos pelo WhatsApp">
+                        <i class="fab fa-whatsapp" aria-hidden="true"></i>
+                    </a>
                 </div>
                 <div class="top-social-info">
-                    <span class="data-atual">terça-feira, agosto 5, 2025</span>
-                    <a href="#">ARQUIVO DO FATO</a>
-                    <a href="#">FALE CONOSCO</a>
+                    <span class="data-atual" id="data-atual">carregando data...</span>
+                    <a href="#arquivo" aria-label="Acesse o arquivo de notícias">ARQUIVO DO FATO</a>
+                    <a href="#contato" aria-label="Entre em contato conosco">FALE CONOSCO</a>
                 </div>
             </div>
         </div>
+        
         <div class="cabecalho-topo">
             <a href="#home" class="logo">
-                <!-- Usando uma URL de placeholder para evitar o erro -->
-                <img src="https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/voz-do-fato.png" alt="Logo Voz do Fato">
+                <img src="https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/voz-do-fato.png" 
+                     alt="Logo Voz do Fato - Portal de Notícias" 
+                     loading="eager"> <!-- Eager pois é logo -->
             </a>
             <div class="banner-publicidade">
-                <!-- Usando uma URL de placeholder para evitar o erro -->
-                <img src="https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/banner.png" alt="Banner de Publicidade">
+                <img src="https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/banner.png" 
+                     alt="Banner de Publicidade" 
+                     loading="lazy">
             </div>
         </div>
-        <nav class="menu-navegacao">
+        
+        <nav class="menu-navegacao" role="navigation" aria-label="Menu principal">
             <div class="menu-container">
-                <button class="menu-hamburguer" aria-label="Abrir Menu">
-                    <i class="fas fa-bars"></i>
+                <button class="menu-hamburguer" 
+                        aria-label="Abrir menu de navegação"
+                        aria-expanded="false"
+                        aria-controls="menu-lista">
+                    <i class="fas fa-bars" aria-hidden="true"></i>
                 </button>
-                <ul class="menu-lista">
-                    <li><a href="#home" class="ativo">CAPA</a></li>
-                    <li><a href="#categoria-cidade">CIDADE</a></li>
-                    <li><a href="#">DIÁRIO AO VIVO</a></li>
-                    <li><a href="#">REGIÃO</a></li>
-                    <li><a href="#">POLÍCIA</a></li>
-                    <li><a href="#">ECONOMIA</a></li>
-                    <li><a href="#">TURISMO</a></li>
-                    <li><a href="#">POLÍTICA</a></li>
-                    <li><a href="#">CULTURA</a></li>
+                
+                <ul class="menu-lista" id="menu-lista" role="menubar">
+                    <li role="none"><a href="#home" class="ativo" role="menuitem">CAPA</a></li>
+                    <li role="none"><a href="#categoria-cidade" role="menuitem">CIDADE</a></li>
+                    <li role="none"><a href="#diario-ao-vivo" role="menuitem">DIÁRIO AO VIVO</a></li>
+                    <li role="none"><a href="#categoria-regiao" role="menuitem">REGIÃO</a></li>
+                    <li role="none"><a href="#categoria-policia" role="menuitem">POLÍCIA</a></li>
+                    <li role="none"><a href="#categoria-economia" role="menuitem">ECONOMIA</a></li>
+                    <li role="none"><a href="#categoria-turismo" role="menuitem">TURISMO</a></li>
+                    <li role="none"><a href="#categoria-politica" role="menuitem">POLÍTICA</a></li>
+                    <li role="none"><a href="#categoria-cultura" role="menuitem">CULTURA</a></li>
                 </ul>
-                <div class="search-icon">
-                    <i class="fas fa-search"></i>
-                </div>
+                
+                <button class="search-icon" 
+                        aria-label="Abrir campo de busca"
+                        aria-expanded="false"
+                        aria-controls="search-input-container">
+                    <i class="fas fa-search" aria-hidden="true"></i>
+                </button>
             </div>
-            <!-- Novo campo de busca expandido -->
-            <div class="search-input-container">
-                <input type="text" id="search-input" placeholder="O que você está procurando?">
-                <button id="search-button">Procurar</button>
+            
+            <!-- Campo de busca melhorado - MELHORADO -->
+            <div class="search-input-container" id="search-input-container" role="search">
+                <label for="search-input" class="visually-hidden">Campo de busca</label>
+                <input type="search" 
+                       id="search-input" 
+                       placeholder="O que você está procurando?"
+                       aria-label="Digite sua busca">
+                <button id="search-button" type="button" aria-label="Executar busca">
+                    <i class="fas fa-search" aria-hidden="true"></i>
+                    <span class="visually-hidden">Procurar</span>
+                </button>
             </div>
         </nav>
     </header>
 
-    <main id="main-content-area" class="conteudo-principal">
-        <!-- O conteúdo da página inicial ou da notícia completa será carregado aqui pelo JavaScript -->
+    <!-- Main com landmark semântico - MELHORADO -->
+    <main id="main-content-area" class="conteudo-principal" role="main">
+        <!-- Breadcrumbs - NOVO -->
+        <nav aria-label="Breadcrumb" class="breadcrumb">
+            <ol id="breadcrumb-list">
+                <li><a href="#home">Início</a></li>
+            </ol>
+        </nav>
+        
+        <!-- Conteúdo será carregado aqui pelo JavaScript -->
+        <div class="loading-placeholder" aria-live="polite" aria-label="Carregando conteúdo">
+            <p>Carregando notícias...</p>
+        </div>
     </main>
 
-    <footer class="novo-rodape">
+    <!-- Aside para conteúdo relacionado - NOVO -->
+    <aside class="sidebar" role="complementary" aria-label="Conteúdo relacionado">
+        <section class="widget">
+            <h3>Notícias Populares</h3>
+            <div id="noticias-populares"></div>
+        </section>
+    </aside>
+
+    <footer class="novo-rodape" role="contentinfo">
         <div class="footer-principal">
             <div class="footer-col-1">
                 <a href="#home" class="logo-footer">
-                    <img src="https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/voz-do-fato.png" alt="Logo Voz do Fato">
+                    <img src="https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/voz-do-fato.png" 
+                         alt="Logo Voz do Fato"
+                         loading="lazy">
                 </a>
-                <p>Voz do Fato é um Portal de Notícias rápidas e confiavel do Brasil. A notícia com credibilidade. Anuncie. Divulgue. Compartilhe.</p>
+                <p>Voz do Fato é um Portal de Notícias rápidas e confiáveis do Brasil. A notícia com credibilidade. Anuncie. Divulgue. Compartilhe.</p>
                 <div class="contato-info">
                     <span>Entre em contato:</span>
-                    <a href="mailto:contato@vozdofato.com.br">contato@vozdofato.com.br</a>
+                    <a href="mailto:contato@vozdofato.com.br" aria-label="Envie um email para contato@vozdofato.com.br">contato@vozdofato.com.br</a>
                 </div>
                 <div class="redes-sociais-footer">
-                    <a href="https://www.facebook.com/profile.php?id=61578725159841" target="_blank"><i class="fab fa-facebook-f"></i></a>
-                    <a href="https://www.instagram.com/vozdofato/" target="_blank"><i class="fab fa-instagram"></i></a>
-                    <a href="#" target="_blank"><i class="fab fa-twitter"></i></a>
-                    <a href="#" target="_blank"><i class="fab fa-youtube"></i></a>
+                    <a href="https://www.facebook.com/profile.php?id=61578725159841" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       aria-label="Facebook do Voz do Fato">
+                        <i class="fab fa-facebook-f" aria-hidden="true"></i>
+                    </a>
+                    <a href="https://www.instagram.com/vozdofato/" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       aria-label="Instagram do Voz do Fato">
+                        <i class="fab fa-instagram" aria-hidden="true"></i>
+                    </a>
+                    <a href="#" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       aria-label="Twitter do Voz do Fato">
+                        <i class="fab fa-twitter" aria-hidden="true"></i>
+                    </a>
+                    <a href="#" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       aria-label="YouTube do Voz do Fato">
+                        <i class="fab fa-youtube" aria-hidden="true"></i>
+                    </a>
                 </div>
             </div>
+            
             <div class="footer-col-2">
                 <h4>POSTS MAIS POPULARES</h4>
                 <div class="post-item">
-                    <img src="https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/policia-civil.png" alt="Post 1">
+                    <img src="https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/policia-civil.png" 
+                         alt="Imagem da notícia sobre polícia civil"
+                         loading="lazy">
                     <div class="post-content">
                         <h5><a href="#noticia-completa?id=post1">Polícia Civil prende empresário de rede de postos de combustíveis e...</a></h5>
-                        <span>12/06/2024</span>
+                        <time datetime="2024-06-12">12/06/2024</time>
                     </div>
                 </div>
                 <div class="post-item">
-                    <img src="https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/nacoes-thermas.png" alt="Post 2">
+                    <img src="https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/nacoes-thermas.png" 
+                         alt="Imagem sobre Thermas Nações"
+                         loading="lazy">
                     <div class="post-content">
-                        <h5><a href="#noticia-completa?id=post2">Chegam as peças do megato boa água “Nações” de R$ 60 milhões do...</a></h5>
+                        <h5><a href="#noticia-completa?id=post2">Chegam as peças do megato boa água "Nações" de R$ 60 milhões do...</a></h5>
                     </div>
                 </div>
                 <div class="post-item">
-                    <img src="https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/thermas-laranjais.png" alt="Post 3">
+                    <img src="https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/thermas-laranjais.png" 
+                         alt="Imagem sobre Thermas dos Laranjais"
+                         loading="lazy">
                     <div class="post-content">
                         <h5><a href="#noticia-completa?id=post3">Thermas dos Laranjais reabre após tempestade com maioria das atrações</a></h5>
                     </div>
                 </div>
             </div>
+            
             <div class="footer-col-3">
                 <h4>CATEGORIA POPULAR</h4>
                 <ul>
@@ -124,22 +260,50 @@
                 </ul>
             </div>
         </div>
+        
         <div class="footer-bottom">
-            <p>© Copyright - Voz do Fato | Todos os Direitos Reservados</p>
+            <p>&copy; <span id="current-year"></span> Copyright - Voz do Fato | Todos os Direitos Reservados</p>
         </div>
-        <button id="scroll-to-top" class="scroll-to-top" title="Voltar ao topo">
-            <i class="fas fa-arrow-up"></i>
+        
+        <button id="scroll-to-top" 
+                class="scroll-to-top" 
+                aria-label="Voltar ao topo da página"
+                title="Voltar ao topo">
+            <i class="fas fa-arrow-up" aria-hidden="true"></i>
         </button>
     </footer>
 
-    <div id="search-modal" class="search-modal">
-        <div class="search-content">
-            <button id="close-search" class="close-search">&times;</button>
-            <input type="text" id="search-input" placeholder="O que você está procurando?">
-            <button id="search-button"><i class="fas fa-search"></i></button>
+    <!-- Modal de erro - NOVO -->
+    <div id="error-modal" class="modal" role="dialog" aria-labelledby="error-title" aria-hidden="true">
+        <div class="modal-content">
+            <h2 id="error-title">Ops! Algo deu errado</h2>
+            <p id="error-message"></p>
+            <button id="error-close" class="button-primary">Fechar</button>
         </div>
     </div>
     
+    <!-- Scripts -->
     <script src="script.js" type="module"></script>
+    
+    <!-- Service Worker para cache - NOVO -->
+    <script>
+        // Registra o service worker para cache offline
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch((registrationError) => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+        
+        // Define o ano atual no footer
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('current-year').textContent = new Date().getFullYear();
+        });
+    </script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-// SCRIPT.JS - VERSÃO MELHORADA COM ACESSIBILIDADE E PERFORMANCE
+// SCRIPT.JS - VERSÃO CORRIGIDA COM ORDEM ADEQUADA DAS FUNÇÕES
 
 // ========== CONFIGURAÇÃO FIREBASE - MELHORADA ==========
 const firebaseConfig = {
@@ -30,7 +30,239 @@ const cache = {
     CACHE_DURATION: 5 * 60 * 1000 // 5 minutos
 };
 
-// ========== VERIFICAÇÃO DE ELEMENTOS DOM - NOVO ==========
+// ========== UTILITÁRIOS - MOVIDO PARA O TOPO ==========
+const Utils = {
+    // Função para sanitizar HTML e prevenir XSS
+    sanitizeHtml(str) {
+        const temp = document.createElement('div');
+        temp.textContent = str;
+        return temp.innerHTML;
+    },
+
+    // Função para formatar data
+    formatDate(dateString) {
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        } catch (error) {
+            return dateString;
+        }
+    },
+
+    // Função para gerar slug para URLs
+    generateSlug(text) {
+        return text
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+            .replace(/[^a-z0-9\s-]/g, '') // Remove caracteres especiais
+            .replace(/\s+/g, '-') // Substitui espaços por hífens
+            .replace(/-+/g, '-') // Remove hífens duplos
+            .trim('-');
+    },
+
+    // Debounce para otimizar performance
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    },
+
+    // Verificar se está em cache válido
+    isCacheValid() {
+        return cache.noticias && 
+               cache.lastFetch && 
+               (Date.now() - cache.lastFetch) < cache.CACHE_DURATION;
+    }
+};
+
+// ========== MANAGERS - MOVIDOS PARA O TOPO ==========
+const LoadingManager = {
+    show(message = 'Carregando...') {
+        const overlay = document.getElementById('loading-overlay');
+        if (!overlay) return;
+        
+        const spinner = overlay.querySelector('.loading-spinner p');
+        
+        if (spinner) {
+            spinner.textContent = message;
+        }
+        
+        overlay.classList.remove('hidden');
+        overlay.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+    },
+
+    hide() {
+        const overlay = document.getElementById('loading-overlay');
+        if (!overlay) return;
+        
+        overlay.classList.add('hidden');
+        overlay.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        
+        // Remove após transição
+        setTimeout(() => {
+            if (overlay.classList.contains('hidden')) {
+                overlay.style.display = 'none';
+            }
+        }, 300);
+    },
+
+    // Loading skeleton para cards
+    showSkeleton(container) {
+        const skeletonHtml = Array(6).fill(0).map(() => `
+            <div class="skeleton skeleton-card" role="img" aria-label="Carregando notícia"></div>
+        `).join('');
+        
+        container.innerHTML = `<div class="grid-noticias-novo">${skeletonHtml}</div>`;
+    }
+};
+
+const ErrorManager = {
+    show(message, title = 'Erro') {
+        const modal = document.getElementById('error-modal');
+        if (!modal) return;
+        
+        const titleElement = document.getElementById('error-title');
+        const messageElement = document.getElementById('error-message');
+        
+        if (titleElement) titleElement.textContent = title;
+        if (messageElement) messageElement.textContent = message;
+        
+        modal.classList.add('show');
+        modal.setAttribute('aria-hidden', 'false');
+        
+        // Foco no botão fechar para acessibilidade
+        const closeButton = document.getElementById('error-close');
+        if (closeButton) setTimeout(() => closeButton.focus(), 100);
+    },
+
+    hide() {
+        const modal = document.getElementById('error-modal');
+        if (!modal) return;
+        
+        modal.classList.remove('show');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+};
+
+const SEOManager = {
+    updateMeta(title, description, image, url) {
+        // Atualizar título
+        document.title = title;
+        
+        // Atualizar meta description
+        let metaDesc = document.querySelector('meta[name="description"]');
+        if (metaDesc) {
+            metaDesc.setAttribute('content', description);
+        }
+        
+        // Atualizar Open Graph
+        this.updateOGTag('og:title', title);
+        this.updateOGTag('og:description', description);
+        this.updateOGTag('og:image', image);
+        this.updateOGTag('og:url', url);
+        
+        // Atualizar Twitter Cards
+        this.updateOGTag('twitter:title', title);
+        this.updateOGTag('twitter:description', description);
+    },
+
+    updateOGTag(property, content) {
+        let tag = document.querySelector(`meta[property="${property}"], meta[name="${property}"]`);
+        if (tag) {
+            tag.setAttribute('content', content);
+        }
+    }
+};
+
+const BreadcrumbManager = {
+    update(items) {
+        const breadcrumbList = document.getElementById('breadcrumb-list');
+        if (!breadcrumbList) return;
+
+        breadcrumbList.innerHTML = items.map((item, index) => {
+            const isLast = index === items.length - 1;
+            return `
+                <li>
+                    ${isLast ? 
+                        `<span aria-current="page">${Utils.sanitizeHtml(item.title)}</span>` :
+                        `<a href="${item.url}">${Utils.sanitizeHtml(item.title)}</a>`
+                    }
+                </li>
+            `;
+        }).join('');
+    }
+};
+
+const AccessibilityManager = {
+    // Atualizar atributos ARIA
+    updateAriaExpanded(element, isExpanded) {
+        if (element) element.setAttribute('aria-expanded', isExpanded.toString());
+    },
+
+    // Anunciar mudanças para leitores de tela
+    announceToScreenReader(message, priority = 'polite') {
+        const announcement = document.createElement('div');
+        announcement.setAttribute('aria-live', priority);
+        announcement.setAttribute('aria-atomic', 'true');
+        announcement.className = 'visually-hidden';
+        announcement.textContent = message;
+        
+        document.body.appendChild(announcement);
+        
+        // Remove após 1 segundo
+        setTimeout(() => {
+            if (document.body.contains(announcement)) {
+                document.body.removeChild(announcement);
+            }
+        }, 1000);
+    },
+
+    // Gerenciar foco
+    trapFocus(container) {
+        const focusableElements = container.querySelectorAll(
+            'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        
+        if (focusableElements.length === 0) return;
+        
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+        
+        const handleTabKey = (e) => {
+            if (e.key !== 'Tab') return;
+            
+            if (e.shiftKey) {
+                if (document.activeElement === firstElement) {
+                    e.preventDefault();
+                    lastElement.focus();
+                }
+            } else {
+                if (document.activeElement === lastElement) {
+                    e.preventDefault();
+                    firstElement.focus();
+                }
+            }
+        };
+        
+        container.addEventListener('keydown', handleTabKey);
+        return () => container.removeEventListener('keydown', handleTabKey);
+    }
+};
+
+// ========== VERIFICAÇÃO DE ELEMENTOS DOM - MOVIDO PARA O TOPO ==========
 const checkRequiredElements = () => {
     const requiredElements = [
         'main-content-area',
@@ -115,7 +347,15 @@ const checkRequiredElements = () => {
     }
 };
 
-// ========== SERVICE WORKER PARA CACHE - CORRIGIDO ==========
+// ========== FUNÇÃO PARA DESTACAR TERMOS DE BUSCA - MOVIDA PARA O TOPO ==========
+const highlightSearchTerm = (text, term) => {
+    if (!term.trim()) return text;
+    
+    const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return text.replace(regex, '<mark>$1</mark>');
+};
+
+// ========== SERVICE WORKER PARA CACHE - MOVIDO PARA O TOPO ==========
 const setupServiceWorker = () => {
     // Só registra se estiver em servidor (não file://)
     if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
@@ -131,241 +371,565 @@ const setupServiceWorker = () => {
     }
 };
 
-// ========== UTILITÁRIOS - NOVO ==========
-const Utils = {
-    // Função para sanitizar HTML e prevenir XSS
-    sanitizeHtml(str) {
-        const temp = document.createElement('div');
-        temp.textContent = str;
-        return temp.innerHTML;
-    },
-
-    // Função para formatar data
-    formatDate(dateString) {
-        try {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('pt-BR', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-            });
-        } catch (error) {
-            return dateString;
+// ========== FUNÇÃO PARA CARREGAR DADOS - MOVIDA PARA O TOPO ==========
+async function loadNewsData() {
+    try {
+        // Verificar cache primeiro
+        if (Utils.isCacheValid()) {
+            console.log('Usando dados do cache');
+            newsData = cache.noticias;
+            return;
         }
-    },
 
-    // Função para gerar slug para URLs
-    generateSlug(text) {
-        return text
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-            .replace(/[^a-z0-9\s-]/g, '') // Remove caracteres especiais
-            .replace(/\s+/g, '-') // Substitui espaços por hífens
-            .replace(/-+/g, '-') // Remove hífens duplos
-            .trim('-');
-    },
-
-    // Debounce para otimizar performance
-    debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    },
-
-    // Verificar se está em cache válido
-    isCacheValid() {
-        return cache.noticias && 
-               cache.lastFetch && 
-               (Date.now() - cache.lastFetch) < cache.CACHE_DURATION;
-    }
-};
-
-// ========== GESTÃO DE LOADING - NOVO ==========
-const LoadingManager = {
-    show(message = 'Carregando...') {
-        const overlay = document.getElementById('loading-overlay');
-        const spinner = overlay.querySelector('.loading-spinner p');
+        console.log('Buscando notícias do Firebase...');
         
-        if (spinner) {
-            spinner.textContent = message;
-        }
-        
-        overlay.classList.remove('hidden');
-        overlay.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
-    },
-
-    hide() {
-        const overlay = document.getElementById('loading-overlay');
-        overlay.classList.add('hidden');
-        overlay.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
-        
-        // Remove após transição
-        setTimeout(() => {
-            if (overlay.classList.contains('hidden')) {
-                overlay.style.display = 'none';
-            }
-        }, 300);
-    },
-
-    // Loading skeleton para cards
-    showSkeleton(container) {
-        const skeletonHtml = Array(6).fill(0).map(() => `
-            <div class="skeleton skeleton-card" role="img" aria-label="Carregando notícia"></div>
-        `).join('');
-        
-        container.innerHTML = `<div class="grid-noticias-novo">${skeletonHtml}</div>`;
-    }
-};
-
-// ========== GESTÃO DE ERROS - NOVO ==========
-const ErrorManager = {
-    show(message, title = 'Erro') {
-        const modal = document.getElementById('error-modal');
-        const titleElement = document.getElementById('error-title');
-        const messageElement = document.getElementById('error-message');
-        
-        titleElement.textContent = title;
-        messageElement.textContent = message;
-        
-        modal.classList.add('show');
-        modal.setAttribute('aria-hidden', 'false');
-        
-        // Foco no botão fechar para acessibilidade
-        const closeButton = document.getElementById('error-close');
-        setTimeout(() => closeButton.focus(), 100);
-    },
-
-    hide() {
-        const modal = document.getElementById('error-modal');
-        modal.classList.remove('show');
-        modal.setAttribute('aria-hidden', 'true');
-    }
-};
-
-// ========== GESTÃO DE SEO/META TAGS - NOVO ==========
-const SEOManager = {
-    updateMeta(title, description, image, url) {
-        // Atualizar título
-        document.title = title;
-        
-        // Atualizar meta description
-        let metaDesc = document.querySelector('meta[name="description"]');
-        if (metaDesc) {
-            metaDesc.setAttribute('content', description);
-        }
-        
-        // Atualizar Open Graph
-        this.updateOGTag('og:title', title);
-        this.updateOGTag('og:description', description);
-        this.updateOGTag('og:image', image);
-        this.updateOGTag('og:url', url);
-        
-        // Atualizar Twitter Cards
-        this.updateOGTag('twitter:title', title);
-        this.updateOGTag('twitter:description', description);
-    },
-
-    updateOGTag(property, content) {
-        let tag = document.querySelector(`meta[property="${property}"], meta[name="${property}"]`);
-        if (tag) {
-            tag.setAttribute('content', content);
-        }
-    }
-};
-
-// ========== BREADCRUMBS - NOVO ==========
-const BreadcrumbManager = {
-    update(items) {
-        const breadcrumbList = document.getElementById('breadcrumb-list');
-        if (!breadcrumbList) return;
-
-        breadcrumbList.innerHTML = items.map((item, index) => {
-            const isLast = index === items.length - 1;
-            return `
-                <li>
-                    ${isLast ? 
-                        `<span aria-current="page">${Utils.sanitizeHtml(item.title)}</span>` :
-                        `<a href="${item.url}">${Utils.sanitizeHtml(item.title)}</a>`
-                    }
-                </li>
-            `;
-        }).join('');
-    }
-};
-
-// ========== ACESSIBILIDADE - NOVO ==========
-const AccessibilityManager = {
-    // Atualizar atributos ARIA
-    updateAriaExpanded(element, isExpanded) {
-        element.setAttribute('aria-expanded', isExpanded.toString());
-    },
-
-    // Anunciar mudanças para leitores de tela
-    announceToScreenReader(message, priority = 'polite') {
-        const announcement = document.createElement('div');
-        announcement.setAttribute('aria-live', priority);
-        announcement.setAttribute('aria-atomic', 'true');
-        announcement.className = 'visually-hidden';
-        announcement.textContent = message;
-        
-        document.body.appendChild(announcement);
-        
-        // Remove após 1 segundo
-        setTimeout(() => {
-            document.body.removeChild(announcement);
-        }, 1000);
-    },
-
-    // Gerenciar foco
-    trapFocus(container) {
-        const focusableElements = container.querySelectorAll(
-            'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        // Query otimizada com ordenação e limite
+        const q = query(
+            collection(db, "noticias"),
+            orderBy("data", "desc"),
+            limit(50) // Limitar para melhor performance
         );
         
-        if (focusableElements.length === 0) return;
+        const querySnapshot = await getDocs(q);
         
-        const firstElement = focusableElements[0];
-        const lastElement = focusableElements[focusableElements.length - 1];
+        if (querySnapshot.empty) {
+            throw new Error('Nenhuma notícia encontrada');
+        }
         
-        const handleTabKey = (e) => {
-            if (e.key !== 'Tab') return;
-            
-            if (e.shiftKey) {
-                if (document.activeElement === firstElement) {
-                    e.preventDefault();
-                    lastElement.focus();
-                }
-            } else {
-                if (document.activeElement === lastElement) {
-                    e.preventDefault();
-                    firstElement.focus();
-                }
+        // Processar dados
+        newsData = {};
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            newsData[doc.id] = {
+                ...data,
+                id: doc.id,
+                categoria: data.categoria || 'Geral',
+                titulo: Utils.sanitizeHtml(data.titulo || 'Título não disponível'),
+                autor: Utils.sanitizeHtml(data.autor || 'Autor não informado'),
+                data: Utils.formatDate(data.data || new Date().toISOString())
+            };
+        });
+
+        // Atualizar cache
+        cache.noticias = newsData;
+        cache.lastFetch = Date.now();
+        
+        console.log(`${Object.keys(newsData).length} notícias carregadas`);
+        
+    } catch (error) {
+        console.error("Erro ao carregar notícias:", error);
+        throw new Error('Falha ao conectar com o servidor de notícias');
+    }
+}
+
+// ========== RENDERIZAÇÃO DA PÁGINA INICIAL - MOVIDA PARA O TOPO ==========
+function renderHomePage() {
+    try {
+        const mainContentArea = document.getElementById('main-content-area');
+        if (!mainContentArea) {
+            console.error('main-content-area não encontrado');
+            return;
+        }
+
+        let homePageContent = `
+            <section class="tendencia-agora" role="banner">
+                <div class="tendencia-conteudo">
+                    <span>TENDÊNCIA AGORA</span>
+                    <p>Empresa de turismo leva a batuques e cores ao plenário da Câmara de Olímpia</p>
+                </div>
+            </section>
+        `;
+
+        const newsArray = Object.values(newsData);
+        
+        if (newsArray.length === 0) {
+            homePageContent += `
+                <div class="no-news-message" role="alert">
+                    <h2>Nenhuma notícia encontrada</h2>
+                    <p>Não há notícias disponíveis no momento. Tente novamente mais tarde.</p>
+                </div>
+            `;
+        } else {
+            // Separar notícias por seções
+            const noticiaPrincipal = newsArray[0] || {};
+            const noticiasCards = newsArray.slice(1, 5);
+            const noticiasGrandes = newsArray.slice(5, 7);
+            const noticiasPequenas = newsArray.slice(7, 12);
+            const noticiasCultura = newsArray
+                .filter(n => n.categoria && n.categoria.toLowerCase().includes('cultura'))
+                .slice(0, 4);
+
+            // Seção principal
+            if (noticiaPrincipal.titulo) {
+                homePageContent += `
+                    <section class="grid-noticias-novo">
+                        <article class="noticia-principal">
+                            <img src="${noticiaPrincipal.urlImagem || 'https://placehold.co/800x400/E0E0E0/333333?text=IMAGEM+INDISPONIVEL'}" 
+                                 alt="${noticiaPrincipal.titulo}" 
+                                 loading="eager">
+                            <div class="info-overlay">
+                                <span class="categoria">${noticiaPrincipal.categoria}</span>
+                                <h2>
+                                    <a href="#noticia-completa?id=${noticiaPrincipal.id}" 
+                                       aria-label="Leia a notícia completa: ${noticiaPrincipal.titulo}">
+                                        ${noticiaPrincipal.titulo}
+                                    </a>
+                                </h2>
+                                <p>
+                                    <span class="autor">${noticiaPrincipal.autor}</span> - 
+                                    <time datetime="${noticiaPrincipal.data}">${noticiaPrincipal.data}</time>
+                                </p>
+                            </div>
+                        </article>
+                        <div class="noticia-card-grid">
+                            ${noticiasCards.map(news => `
+                                <article class="noticia-card">
+                                    <img src="${news.urlImagem || 'https://placehold.co/400x200/E0E0E0/333333?text=IMAGEM+INDISPONIVEL'}" 
+                                         alt="${news.titulo}"
+                                         loading="lazy">
+                                    <div class="info-overlay">
+                                        <span class="categoria">${news.categoria}</span>
+                                        <h4>
+                                            <a href="#noticia-completa?id=${news.id}"
+                                               aria-label="Leia: ${news.titulo}">
+                                                ${news.titulo}
+                                            </a>
+                                        </h4>
+                                    </div>
+                                </article>
+                            `).join('')}
+                        </div>
+                    </section>
+                `;
             }
+
+            // Seção inferior
+            if (noticiasGrandes.length > 0 || noticiasPequenas.length > 0) {
+                homePageContent += `
+                    <section class="grid-inferior">
+                        ${noticiasGrandes.map(news => `
+                            <article class="card-grande">
+                                <img src="${news.urlImagem || 'https://placehold.co/600x300/E0E0E0/333333?text=IMAGEM+INDISPONIVEL'}" 
+                                     alt="${news.titulo}"
+                                     loading="lazy">
+                                <div class="info-overlay">
+                                    <span class="categoria">${news.categoria}</span>
+                                    <h4>
+                                        <a href="#noticia-completa?id=${news.id}"
+                                           aria-label="Leia: ${news.titulo}">
+                                            ${news.titulo}
+                                        </a>
+                                    </h4>
+                                    <p>
+                                        <span class="autor">${news.autor}</span> - 
+                                        <time datetime="${news.data}">${news.data}</time>
+                                    </p>
+                                </div>
+                            </article>
+                        `).join('')}
+                        ${noticiasPequenas.map(news => `
+                            <article class="card-pequeno">
+                                <img src="${news.urlImagem || 'https://placehold.co/300x200/E0E0E0/333333?text=IMAGEM+INDISPONIVEL'}" 
+                                     alt="${news.titulo}"
+                                     loading="lazy">
+                                <div class="info-overlay">
+                                    <span class="categoria">${news.categoria}</span>
+                                    <h5>
+                                        <a href="#noticia-completa?id=${news.id}"
+                                           aria-label="Leia: ${news.titulo}">
+                                            ${news.titulo}
+                                        </a>
+                                    </h5>
+                                </div>
+                            </article>
+                        `).join('')}
+                    </section>
+                `;
+            }
+
+            // Seção de cultura
+            if (noticiasCultura.length > 0) {
+                homePageContent += `
+                    <section class="secao-cultura">
+                        <div class="secao-titulo">
+                            <h3>CULTURA E LAZER</h3>
+                        </div>
+                        <div class="conteudo-com-anuncio">
+                            <div class="grid-cultura">
+                                ${noticiasCultura.map(news => `
+                                    <article class="noticia-cultura">
+                                        <img src="${news.urlImagem || 'https://placehold.co/400x250/E0E0E0/333333?text=IMAGEM+INDISPONIVEL'}" 
+                                             alt="${news.titulo}"
+                                             loading="lazy">
+                                        <div class="info-overlay">
+                                            <h4>
+                                                <a href="#noticia-completa?id=${news.id}"
+                                                   aria-label="Leia: ${news.titulo}">
+                                                    ${news.titulo}
+                                                </a>
+                                            </h4>
+                                            <p>
+                                                <span class="autor">${news.autor}</span> - 
+                                                <time datetime="${news.data}">${news.data}</time>
+                                            </p>
+                                        </div>
+                                    </article>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </section>
+                `;
+            }
+        }
+
+        mainContentArea.innerHTML = homePageContent;
+        
+        // Atualizar SEO
+        SEOManager.updateMeta(
+            'Voz do Fato - Portal de Notícias',
+            'Portal de notícias rápidas e confiáveis do Brasil. Notícias de Cidade, Política, Economia, Cultura e mais.',
+            'https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/voz-do-fato.png',
+            window.location.href
+        );
+        
+        // Atualizar breadcrumbs
+        BreadcrumbManager.update([
+            { title: 'Início', url: '#home' }
+        ]);
+        
+    } catch (error) {
+        console.error('Erro ao renderizar página inicial:', error);
+        ErrorManager.show('Erro ao exibir as notícias');
+    }
+}
+
+// ========== RENDERIZAÇÃO DE NOTÍCIA COMPLETA - MOVIDA PARA O TOPO ==========
+function renderNoticiaCompleta(newsId) {
+    try {
+        const mainContentArea = document.getElementById('main-content-area');
+        if (!mainContentArea) {
+            console.error('main-content-area não encontrado');
+            return;
+        }
+
+        const news = newsData[newsId];
+        
+        if (!news) {
+            const notFoundContent = `
+                <article class="artigo-completo" role="main">
+                    <div class="artigo-cabecalho">
+                        <h1>Notícia Não Encontrada</h1>
+                        <p class="data-autor">Erro 404</p>
+                    </div>
+                    <div class="artigo-texto">
+                        <p class="lead">Desculpe, a notícia que você procura não foi encontrada.</p>
+                        <p>A notícia pode ter sido removida ou o link pode estar incorreto.</p>
+                        <p><a href="#home" class="button-primary">Voltar ao Início</a></p>
+                    </div>
+                </article>
+            `;
+            mainContentArea.innerHTML = notFoundContent;
+            
+            // Atualizar SEO para 404
+            SEOManager.updateMeta(
+                'Notícia Não Encontrada - Voz do Fato',
+                'A notícia solicitada não foi encontrada.',
+                'https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/voz-do-fato.png',
+                window.location.href
+            );
+            
+            BreadcrumbManager.update([
+                { title: 'Início', url: '#home' },
+                { title: 'Notícia Não Encontrada', url: '' }
+            ]);
+            
+            return;
+        }
+
+        const noticiaCompletaTemplate = `
+            <article class="artigo-completo" role="main">
+                <div class="artigo-cabecalho">
+                    <h1>${news.titulo}</h1>
+                    <p class="data-autor">
+                        Publicado em <time datetime="${news.data}">${news.data}</time> 
+                        por <span class="autor">${news.autor}</span>
+                        <span class="categoria-badge">${news.categoria}</span>
+                    </p>
+                </div>
+                <img src="${news.urlImagem || 'https://placehold.co/800x450/E0E0E0/333333?text=IMAGEM+INDISPONIVEL'}" 
+                     alt="Imagem da notícia: ${news.titulo}"
+                     loading="eager">
+                <div class="artigo-texto">
+                    ${news.resumo ? `<p class="lead">${news.resumo}</p>` : ''}
+                    ${news.conteudo || '<p>Conteúdo da notícia não disponível.</p>'}
+                </div>
+                
+                <!-- Botões de compartilhamento -->
+                <div class="compartilhar-artigo">
+                    <h3>Compartilhe esta notícia:</h3>
+                    <div class="botoes-compartilhar">
+                        <button onclick="compartilharFacebook('${newsId}')" 
+                                aria-label="Compartilhar no Facebook"
+                                class="btn-facebook">
+                            <i class="fab fa-facebook-f" aria-hidden="true"></i> Facebook
+                        </button>
+                        <button onclick="compartilharTwitter('${newsId}')" 
+                                aria-label="Compartilhar no Twitter"
+                                class="btn-twitter">
+                            <i class="fab fa-twitter" aria-hidden="true"></i> Twitter
+                        </button>
+                        <button onclick="compartilharWhatsapp('${newsId}')" 
+                                aria-label="Compartilhar no WhatsApp"
+                                class="btn-whatsapp">
+                            <i class="fab fa-whatsapp" aria-hidden="true"></i> WhatsApp
+                        </button>
+                    </div>
+                </div>
+            </article>
+        `;
+
+        mainContentArea.innerHTML = noticiaCompletaTemplate;
+        
+        // Atualizar SEO
+        SEOManager.updateMeta(
+            `${news.titulo} - Voz do Fato`,
+            news.resumo || news.titulo,
+            news.urlImagem || 'https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/voz-do-fato.png',
+            `${window.location.origin}${window.location.pathname}#noticia-completa?id=${newsId}`
+        );
+        
+        // Atualizar breadcrumbs
+        BreadcrumbManager.update([
+            { title: 'Início', url: '#home' },
+            { title: news.categoria, url: `#categoria-${Utils.generateSlug(news.categoria)}` },
+            { title: news.titulo.length > 50 ? news.titulo.substring(0, 50) + '...' : news.titulo, url: '' }
+        ]);
+        
+    } catch (error) {
+        console.error('Erro ao renderizar notícia completa:', error);
+        ErrorManager.show('Erro ao carregar a notícia completa');
+    }
+}
+
+// ========== RENDERIZAÇÃO POR CATEGORIA - MOVIDA PARA O TOPO ==========
+function renderCategoria(categoria) {
+    const mainContentArea = document.getElementById('main-content-area');
+    if (!mainContentArea) {
+        console.error('main-content-area não encontrado');
+        return;
+    }
+
+    const newsArray = Object.values(newsData)
+        .filter(news => news.categoria.toLowerCase().includes(categoria.toLowerCase()));
+
+    if (newsArray.length === 0) {
+        mainContentArea.innerHTML = `
+            <div class="categoria-vazia">
+                <h1>Categoria: ${categoria.toUpperCase()}</h1>
+                <p>Não há notícias disponíveis nesta categoria no momento.</p>
+                <a href="#home" class="button-primary">Voltar ao Início</a>
+            </div>
+        `;
+        return;
+    }
+
+    const categoriaContent = `
+        <div class="categoria-header">
+            <h1>Notícias de ${categoria.toUpperCase()}</h1>
+            <p>${newsArray.length} notícia${newsArray.length > 1 ? 's' : ''} encontrada${newsArray.length > 1 ? 's' : ''}</p>
+        </div>
+        <div class="grid-categoria">
+            ${newsArray.map(news => `
+                <article class="noticia-card">
+                    <img src="${news.urlImagem || 'https://placehold.co/400x250/E0E0E0/333333?text=IMAGEM+INDISPONIVEL'}" 
+                         alt="${news.titulo}"
+                         loading="lazy">
+                    <div class="info-overlay">
+                        <span class="categoria">${news.categoria}</span>
+                        <h4>
+                            <a href="#noticia-completa?id=${news.id}" 
+                               aria-label="Leia: ${news.titulo}">
+                                ${news.titulo}
+                            </a>
+                        </h4>
+                        <p>
+                            <span class="autor">${news.autor}</span> - 
+                            <time datetime="${news.data}">${news.data}</time>
+                        </p>
+                    </div>
+                </article>
+            `).join('')}
+        </div>
+    `;
+
+    mainContentArea.innerHTML = categoriaContent;
+    
+    BreadcrumbManager.update([
+        { title: 'Início', url: '#home' },
+        { title: categoria.toUpperCase(), url: '' }
+    ]);
+}
+
+// ========== RENDERIZAÇÃO DE RESULTADOS DE BUSCA - MOVIDA PARA O TOPO ==========
+function renderSearchResults(searchTerm, results) {
+    const mainContentArea = document.getElementById('main-content-area');
+    if (!mainContentArea) {
+        console.error('main-content-area não encontrado');
+        return;
+    }
+
+    if (results.length === 0) {
+        mainContentArea.innerHTML = `
+            <div class="search-results">
+                <h1>Resultados da Busca</h1>
+                <p>Nenhum resultado encontrado para: "<strong>${Utils.sanitizeHtml(searchTerm)}</strong>"</p>
+                <p>Tente usar outras palavras-chave ou volte à <a href="#home">página inicial</a>.</p>
+            </div>
+        `;
+    } else {
+        const resultsContent = `
+            <div class="search-results">
+                <h1>Resultados da Busca</h1>
+                <p>${results.length} resultado${results.length !== 1 ? 's' : ''} encontrado${results.length !== 1 ? 's' : ''} para: "<strong>${Utils.sanitizeHtml(searchTerm)}</strong>"</p>
+                <div class="results-grid">
+                    ${results.map(news => `
+                        <article class="search-result-card">
+                            <img src="${news.urlImagem || 'https://placehold.co/300x200/E0E0E0/333333?text=IMAGEM+INDISPONIVEL'}" 
+                                 alt="${news.titulo}"
+                                 loading="lazy">
+                            <div class="result-content">
+                                <span class="categoria">${news.categoria}</span>
+                                <h3>
+                                    <a href="#noticia-completa?id=${news.id}" 
+                                       aria-label="Leia: ${news.titulo}">
+                                        ${highlightSearchTerm(news.titulo, searchTerm)}
+                                    </a>
+                                </h3>
+                                <p class="result-excerpt">
+                                    ${highlightSearchTerm(
+                                        (news.resumo || news.conteudo || '').substring(0, 150) + '...', 
+                                        searchTerm
+                                    )}
+                                </p>
+                                <p class="result-meta">
+                                    <span class="autor">${news.autor}</span> - 
+                                    <time datetime="${news.data}">${news.data}</time>
+                                </p>
+                            </div>
+                        </article>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        mainContentArea.innerHTML = resultsContent;
+    }
+    
+    BreadcrumbManager.update([
+        { title: 'Início', url: '#home' },
+        { title: `Busca: ${searchTerm}`, url: '' }
+    ]);
+    
+    addLinkInterceptors();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ========== INTERCEPTAÇÃO DE LINKS - MOVIDA PARA O TOPO ==========
+function addLinkInterceptors() {
+    document.querySelectorAll('a[href^="#"]').forEach(link => {
+        link.removeEventListener('click', handleInternalLinkClick);
+        link.addEventListener('click', handleInternalLinkClick);
+    });
+}
+
+function handleInternalLinkClick(event) {
+    const href = event.currentTarget.getAttribute('href');
+    
+    if (!href || !href.startsWith('#')) return;
+    
+    event.preventDefault();
+
+    try {
+        const [page, queryString] = href.substring(1).split('?');
+        const params = {};
+        
+        if (queryString) {
+            queryString.split('&').forEach(param => {
+                const [key, value] = param.split('=');
+                params[key] = decodeURIComponent(value);
+            });
+        }
+        
+        renderPage(page, params);
+        
+    } catch (error) {
+        console.error('Erro ao processar link:', error);
+        renderPage('home'); // Fallback para home
+    }
+}
+
+// ========== RENDERIZAÇÃO DE PÁGINAS - FUNÇÃO PRINCIPAL MOVIDA PARA O TOPO ==========
+function renderPage(pageName, params = {}) {
+    if (isLoading) return;
+    
+    currentPage = pageName;
+    
+    try {
+        if (pageName === 'home') {
+            renderHomePage();
+        } else if (pageName === 'noticia-completa') {
+            renderNoticiaCompleta(params.id);
+        } else if (pageName.startsWith('categoria-')) {
+            const categoria = pageName.replace('categoria-', '').replace('-', ' ');
+            renderCategoria(categoria);
+        } else {
+            // Página não encontrada
+            const mainContentArea = document.getElementById('main-content-area');
+            if (mainContentArea) {
+                mainContentArea.innerHTML = `
+                    <div class="page-not-found">
+                        <h1>Página Não Encontrada</h1>
+                        <p>A página que você procura não existe.</p>
+                        <a href="#home" class="button-primary">Voltar ao Início</a>
+                    </div>
+                `;
+            }
+        }
+        
+        addLinkInterceptors();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Fechar menu mobile
+        const menuLista = document.querySelector('.menu-lista');
+        const menuHamburguer = document.querySelector('.menu-hamburguer');
+        if (window.innerWidth <= 768 && menuLista) {
+            menuLista.classList.remove('active');
+            AccessibilityManager.updateAriaExpanded(menuHamburguer, false);
+        }
+        
+    } catch (error) {
+        console.error(`Erro ao renderizar página ${pageName}:`, error);
+        ErrorManager.show('Erro ao carregar a página');
+    }
+}
+
+// ========== ATUALIZAR DATA ATUAL - MOVIDA PARA O TOPO ==========
+function updateCurrentDate() {
+    const dataAtual = document.getElementById('data-atual');
+    if (dataAtual) {
+        const now = new Date();
+        const options = {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
         };
         
-        container.addEventListener('keydown', handleTabKey);
-        return () => container.removeEventListener('keydown', handleTabKey);
+        const dateString = now.toLocaleDateString('pt-BR', options);
+        dataAtual.textContent = dateString;
     }
-};
+}
 
-// ========== FUNÇÃO PARA DESTACAR TERMOS DE BUSCA - CORRIGIDA ==========
-const highlightSearchTerm = (text, term) => {
-    if (!term.trim()) return text;
-    
-    const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    return text.replace(regex, '<mark>$1</mark>');
-};
-
-// ========== FUNÇÕES PRINCIPAIS - MELHORADAS ==========
+// ========== INICIALIZAÇÃO PRINCIPAL - AGORA COM ORDEM CORRETA ==========
 document.addEventListener('DOMContentLoaded', async () => {
     
     // Verificar e criar elementos DOM ausentes primeiro
@@ -396,7 +960,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // ========== INICIALIZAÇÃO - MELHORADA ==========
+    // ========== INICIALIZAÇÃO - AGORA FUNCIONA CORRETAMENTE ==========
     try {
         LoadingManager.show('Carregando notícias...');
         
@@ -406,7 +970,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Carregar notícias
         await loadNewsData();
         
-        // Renderizar página inicial
+        // Renderizar página inicial - AGORA A FUNÇÃO JÁ ESTÁ DECLARADA
         renderPage('home');
         
         LoadingManager.hide();
@@ -417,534 +981,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Erro durante inicialização:', error);
         LoadingManager.hide();
         ErrorManager.show('Erro ao carregar as notícias. Tente recarregar a página.');
-    }
-
-    // ========== FUNÇÃO PARA CARREGAR DADOS - OTIMIZADA ==========
-    async function loadNewsData() {
-        try {
-            // Verificar cache primeiro
-            if (Utils.isCacheValid()) {
-                console.log('Usando dados do cache');
-                newsData = cache.noticias;
-                return;
-            }
-
-            console.log('Buscando notícias do Firebase...');
-            
-            // Query otimizada com ordenação e limite
-            const q = query(
-                collection(db, "noticias"),
-                orderBy("data", "desc"),
-                limit(50) // Limitar para melhor performance
-            );
-            
-            const querySnapshot = await getDocs(q);
-            
-            if (querySnapshot.empty) {
-                throw new Error('Nenhuma notícia encontrada');
-            }
-            
-            // Processar dados
-            newsData = {};
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                newsData[doc.id] = {
-                    ...data,
-                    id: doc.id,
-                    categoria: data.categoria || 'Geral',
-                    titulo: Utils.sanitizeHtml(data.titulo || 'Título não disponível'),
-                    autor: Utils.sanitizeHtml(data.autor || 'Autor não informado'),
-                    data: Utils.formatDate(data.data || new Date().toISOString())
-                };
-            });
-
-            // Atualizar cache
-            cache.noticias = newsData;
-            cache.lastFetch = Date.now();
-            
-            console.log(`${Object.keys(newsData).length} notícias carregadas`);
-            
-        } catch (error) {
-            console.error("Erro ao carregar notícias:", error);
-            throw new Error('Falha ao conectar com o servidor de notícias');
-        }
-    }
-
-    // ========== RENDERIZAÇÃO DA PÁGINA INICIAL - MELHORADA ==========
-    const renderHomePage = () => {
-        try {
-            let homePageContent = `
-                <section class="tendencia-agora" role="banner">
-                    <div class="tendencia-conteudo">
-                        <span>TENDÊNCIA AGORA</span>
-                        <p>Empresa de turismo leva a batuques e cores ao plenário da Câmara de Olímpia</p>
-                    </div>
-                </section>
-            `;
-
-            const newsArray = Object.values(newsData);
-            
-            if (newsArray.length === 0) {
-                homePageContent += `
-                    <div class="no-news-message" role="alert">
-                        <h2>Nenhuma notícia encontrada</h2>
-                        <p>Não há notícias disponíveis no momento. Tente novamente mais tarde.</p>
-                    </div>
-                `;
-            } else {
-                // Separar notícias por seções
-                const noticiaPrincipal = newsArray[0] || {};
-                const noticiasCards = newsArray.slice(1, 5);
-                const noticiasGrandes = newsArray.slice(5, 7);
-                const noticiasPequenas = newsArray.slice(7, 12);
-                const noticiasCultura = newsArray
-                    .filter(n => n.categoria && n.categoria.toLowerCase().includes('cultura'))
-                    .slice(0, 4);
-
-                // Seção principal
-                if (noticiaPrincipal.titulo) {
-                    homePageContent += `
-                        <section class="grid-noticias-novo">
-                            <article class="noticia-principal">
-                                <img src="${noticiaPrincipal.urlImagem || 'https://placehold.co/800x400/E0E0E0/333333?text=IMAGEM+INDISPONIVEL'}" 
-                                     alt="${noticiaPrincipal.titulo}" 
-                                     loading="eager">
-                                <div class="info-overlay">
-                                    <span class="categoria">${noticiaPrincipal.categoria}</span>
-                                    <h2>
-                                        <a href="#noticia-completa?id=${noticiaPrincipal.id}" 
-                                           aria-label="Leia a notícia completa: ${noticiaPrincipal.titulo}">
-                                            ${noticiaPrincipal.titulo}
-                                        </a>
-                                    </h2>
-                                    <p>
-                                        <span class="autor">${noticiaPrincipal.autor}</span> - 
-                                        <time datetime="${noticiaPrincipal.data}">${noticiaPrincipal.data}</time>
-                                    </p>
-                                </div>
-                            </article>
-                            <div class="noticia-card-grid">
-                                ${noticiasCards.map(news => `
-                                    <article class="noticia-card">
-                                        <img src="${news.urlImagem || 'https://placehold.co/400x200/E0E0E0/333333?text=IMAGEM+INDISPONIVEL'}" 
-                                             alt="${news.titulo}"
-                                             loading="lazy">
-                                        <div class="info-overlay">
-                                            <span class="categoria">${news.categoria}</span>
-                                            <h4>
-                                                <a href="#noticia-completa?id=${news.id}"
-                                                   aria-label="Leia: ${news.titulo}">
-                                                    ${news.titulo}
-                                                </a>
-                                            </h4>
-                                        </div>
-                                    </article>
-                                `).join('')}
-                            </div>
-                        </section>
-                    `;
-                }
-
-                // Seção inferior
-                if (noticiasGrandes.length > 0 || noticiasPequenas.length > 0) {
-                    homePageContent += `
-                        <section class="grid-inferior">
-                            ${noticiasGrandes.map(news => `
-                                <article class="card-grande">
-                                    <img src="${news.urlImagem || 'https://placehold.co/600x300/E0E0E0/333333?text=IMAGEM+INDISPONIVEL'}" 
-                                         alt="${news.titulo}"
-                                         loading="lazy">
-                                    <div class="info-overlay">
-                                        <span class="categoria">${news.categoria}</span>
-                                        <h4>
-                                            <a href="#noticia-completa?id=${news.id}"
-                                               aria-label="Leia: ${news.titulo}">
-                                                ${news.titulo}
-                                            </a>
-                                        </h4>
-                                        <p>
-                                            <span class="autor">${news.autor}</span> - 
-                                            <time datetime="${news.data}">${news.data}</time>
-                                        </p>
-                                    </div>
-                                </article>
-                            `).join('')}
-                            ${noticiasPequenas.map(news => `
-                                <article class="card-pequeno">
-                                    <img src="${news.urlImagem || 'https://placehold.co/300x200/E0E0E0/333333?text=IMAGEM+INDISPONIVEL'}" 
-                                         alt="${news.titulo}"
-                                         loading="lazy">
-                                    <div class="info-overlay">
-                                        <span class="categoria">${news.categoria}</span>
-                                        <h5>
-                                            <a href="#noticia-completa?id=${news.id}"
-                                               aria-label="Leia: ${news.titulo}">
-                                                ${news.titulo}
-                                            </a>
-                                        </h5>
-                                    </div>
-                                </article>
-                            `).join('')}
-                        </section>
-                    `;
-                }
-
-                // Seção de cultura
-                if (noticiasCultura.length > 0) {
-                    homePageContent += `
-                        <section class="secao-cultura">
-                            <div class="secao-titulo">
-                                <h3>CULTURA E LAZER</h3>
-                            </div>
-                            <div class="conteudo-com-anuncio">
-                                <div class="grid-cultura">
-                                    ${noticiasCultura.map(news => `
-                                        <article class="noticia-cultura">
-                                            <img src="${news.urlImagem || 'https://placehold.co/400x250/E0E0E0/333333?text=IMAGEM+INDISPONIVEL'}" 
-                                                 alt="${news.titulo}"
-                                                 loading="lazy">
-                                            <div class="info-overlay">
-                                                <h4>
-                                                    <a href="#noticia-completa?id=${news.id}"
-                                                       aria-label="Leia: ${news.titulo}">
-                                                        ${news.titulo}
-                                                    </a>
-                                                </h4>
-                                                <p>
-                                                    <span class="autor">${news.autor}</span> - 
-                                                    <time datetime="${news.data}">${news.data}</time>
-                                                </p>
-                                            </div>
-                                        </article>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        </section>
-                    `;
-                }
-            }
-
-            elements.mainContentArea.innerHTML = homePageContent;
-            
-            // Atualizar SEO
-            SEOManager.updateMeta(
-                'Voz do Fato - Portal de Notícias',
-                'Portal de notícias rápidas e confiáveis do Brasil. Notícias de Cidade, Política, Economia, Cultura e mais.',
-                'https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/voz-do-fato.png',
-                window.location.href
-            );
-            
-            // Atualizar breadcrumbs
-            BreadcrumbManager.update([
-                { title: 'Início', url: '#home' }
-            ]);
-            
-        } catch (error) {
-            console.error('Erro ao renderizar página inicial:', error);
-            ErrorManager.show('Erro ao exibir as notícias');
-        }
-    };
-
-    // ========== RENDERIZAÇÃO DE NOTÍCIA COMPLETA - MELHORADA ==========
-    const renderNoticiaCompleta = (newsId) => {
-        try {
-            const news = newsData[newsId];
-            
-            if (!news) {
-                const notFoundContent = `
-                    <article class="artigo-completo" role="main">
-                        <div class="artigo-cabecalho">
-                            <h1>Notícia Não Encontrada</h1>
-                            <p class="data-autor">Erro 404</p>
-                        </div>
-                        <div class="artigo-texto">
-                            <p class="lead">Desculpe, a notícia que você procura não foi encontrada.</p>
-                            <p>A notícia pode ter sido removida ou o link pode estar incorreto.</p>
-                            <p><a href="#home" class="button-primary">Voltar ao Início</a></p>
-                        </div>
-                    </article>
-                `;
-                elements.mainContentArea.innerHTML = notFoundContent;
-                
-                // Atualizar SEO para 404
-                SEOManager.updateMeta(
-                    'Notícia Não Encontrada - Voz do Fato',
-                    'A notícia solicitada não foi encontrada.',
-                    'https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/voz-do-fato.png',
-                    window.location.href
-                );
-                
-                BreadcrumbManager.update([
-                    { title: 'Início', url: '#home' },
-                    { title: 'Notícia Não Encontrada', url: '' }
-                ]);
-                
-                return;
-            }
-
-            const noticiaCompletaTemplate = `
-                <article class="artigo-completo" role="main">
-                    <div class="artigo-cabecalho">
-                        <h1>${news.titulo}</h1>
-                        <p class="data-autor">
-                            Publicado em <time datetime="${news.data}">${news.data}</time> 
-                            por <span class="autor">${news.autor}</span>
-                            <span class="categoria-badge">${news.categoria}</span>
-                        </p>
-                    </div>
-                    <img src="${news.urlImagem || 'https://placehold.co/800x450/E0E0E0/333333?text=IMAGEM+INDISPONIVEL'}" 
-                         alt="Imagem da notícia: ${news.titulo}"
-                         loading="eager">
-                    <div class="artigo-texto">
-                        ${news.resumo ? `<p class="lead">${news.resumo}</p>` : ''}
-                        ${news.conteudo || '<p>Conteúdo da notícia não disponível.</p>'}
-                    </div>
-                    
-                    <!-- Botões de compartilhamento - NOVO -->
-                    <div class="compartilhar-artigo">
-                        <h3>Compartilhe esta notícia:</h3>
-                        <div class="botoes-compartilhar">
-                            <button onclick="compartilharFacebook('${newsId}')" 
-                                    aria-label="Compartilhar no Facebook"
-                                    class="btn-facebook">
-                                <i class="fab fa-facebook-f" aria-hidden="true"></i> Facebook
-                            </button>
-                            <button onclick="compartilharTwitter('${newsId}')" 
-                                    aria-label="Compartilhar no Twitter"
-                                    class="btn-twitter">
-                                <i class="fab fa-twitter" aria-hidden="true"></i> Twitter
-                            </button>
-                            <button onclick="compartilharWhatsapp('${newsId}')" 
-                                    aria-label="Compartilhar no WhatsApp"
-                                    class="btn-whatsapp">
-                                <i class="fab fa-whatsapp" aria-hidden="true"></i> WhatsApp
-                            </button>
-                        </div>
-                    </div>
-                </article>
-            `;
-
-            elements.mainContentArea.innerHTML = noticiaCompletaTemplate;
-            
-            // Atualizar SEO
-            SEOManager.updateMeta(
-                `${news.titulo} - Voz do Fato`,
-                news.resumo || news.titulo,
-                news.urlImagem || 'https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/voz-do-fato.png',
-                `${window.location.origin}${window.location.pathname}#noticia-completa?id=${newsId}`
-            );
-            
-            // Atualizar breadcrumbs
-            BreadcrumbManager.update([
-                { title: 'Início', url: '#home' },
-                { title: news.categoria, url: `#categoria-${Utils.generateSlug(news.categoria)}` },
-                { title: news.titulo.length > 50 ? news.titulo.substring(0, 50) + '...' : news.titulo, url: '' }
-            ]);
-            
-        } catch (error) {
-            console.error('Erro ao renderizar notícia completa:', error);
-            ErrorManager.show('Erro ao carregar a notícia completa');
-        }
-    };
-
-    // ========== RENDERIZAÇÃO POR CATEGORIA - NOVO ==========
-    const renderCategoria = (categoria) => {
-        const newsArray = Object.values(newsData)
-            .filter(news => news.categoria.toLowerCase().includes(categoria.toLowerCase()));
-
-        if (newsArray.length === 0) {
-            elements.mainContentArea.innerHTML = `
-                <div class="categoria-vazia">
-                    <h1>Categoria: ${categoria.toUpperCase()}</h1>
-                    <p>Não há notícias disponíveis nesta categoria no momento.</p>
-                    <a href="#home" class="button-primary">Voltar ao Início</a>
-                </div>
-            `;
-            return;
-        }
-
-        const categoriaContent = `
-            <div class="categoria-header">
-                <h1>Notícias de ${categoria.toUpperCase()}</h1>
-                <p>${newsArray.length} notícia${newsArray.length > 1 ? 's' : ''} encontrada${newsArray.length > 1 ? 's' : ''}</p>
-            </div>
-            <div class="grid-categoria">
-                ${newsArray.map(news => `
-                    <article class="noticia-card">
-                        <img src="${news.urlImagem || 'https://placehold.co/400x250/E0E0E0/333333?text=IMAGEM+INDISPONIVEL'}" 
-                             alt="${news.titulo}"
-                             loading="lazy">
-                        <div class="info-overlay">
-                            <span class="categoria">${news.categoria}</span>
-                            <h4>
-                                <a href="#noticia-completa?id=${news.id}" 
-                                   aria-label="Leia: ${news.titulo}">
-                                    ${news.titulo}
-                                </a>
-                            </h4>
-                            <p>
-                                <span class="autor">${news.autor}</span> - 
-                                <time datetime="${news.data}">${news.data}</time>
-                            </p>
-                        </div>
-                    </article>
-                `).join('')}
-            </div>
-        `;
-
-        elements.mainContentArea.innerHTML = categoriaContent;
-        
-        BreadcrumbManager.update([
-            { title: 'Início', url: '#home' },
-            { title: categoria.toUpperCase(), url: '' }
-        ]);
-    };
-
-    // ========== RENDERIZAÇÃO DE RESULTADOS DE BUSCA - NOVO ==========
-    const renderSearchResults = (searchTerm, results) => {
-        if (results.length === 0) {
-            elements.mainContentArea.innerHTML = `
-                <div class="search-results">
-                    <h1>Resultados da Busca</h1>
-                    <p>Nenhum resultado encontrado para: "<strong>${Utils.sanitizeHtml(searchTerm)}</strong>"</p>
-                    <p>Tente usar outras palavras-chave ou volte à <a href="#home">página inicial</a>.</p>
-                </div>
-            `;
-        } else {
-            const resultsContent = `
-                <div class="search-results">
-                    <h1>Resultados da Busca</h1>
-                    <p>${results.length} resultado${results.length !== 1 ? 's' : ''} encontrado${results.length !== 1 ? 's' : ''} para: "<strong>${Utils.sanitizeHtml(searchTerm)}</strong>"</p>
-                    <div class="results-grid">
-                        ${results.map(news => `
-                            <article class="search-result-card">
-                                <img src="${news.urlImagem || 'https://placehold.co/300x200/E0E0E0/333333?text=IMAGEM+INDISPONIVEL'}" 
-                                     alt="${news.titulo}"
-                                     loading="lazy">
-                                <div class="result-content">
-                                    <span class="categoria">${news.categoria}</span>
-                                    <h3>
-                                        <a href="#noticia-completa?id=${news.id}" 
-                                           aria-label="Leia: ${news.titulo}">
-                                            ${highlightSearchTerm(news.titulo, searchTerm)}
-                                        </a>
-                                    </h3>
-                                    <p class="result-excerpt">
-                                        ${highlightSearchTerm(
-                                            (news.resumo || news.conteudo || '').substring(0, 150) + '...', 
-                                            searchTerm
-                                        )}
-                                    </p>
-                                    <p class="result-meta">
-                                        <span class="autor">${news.autor}</span> - 
-                                        <time datetime="${news.data}">${news.data}</time>
-                                    </p>
-                                </div>
-                            </article>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-            elements.mainContentArea.innerHTML = resultsContent;
-        }
-        
-        BreadcrumbManager.update([
-            { title: 'Início', url: '#home' },
-            { title: `Busca: ${searchTerm}`, url: '' }
-        ]);
-        
-        addLinkInterceptors();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    // ========== INTERCEPTAÇÃO DE LINKS - MELHORADA ==========
-    const addLinkInterceptors = () => {
-        document.querySelectorAll('a[href^="#"]').forEach(link => {
-            link.removeEventListener('click', handleInternalLinkClick);
-            link.addEventListener('click', handleInternalLinkClick);
-        });
-    };
-
-    const handleInternalLinkClick = (event) => {
-        const href = event.currentTarget.getAttribute('href');
-        
-        if (!href || !href.startsWith('#')) return;
-        
-        event.preventDefault();
-
-        try {
-            const [page, queryString] = href.substring(1).split('?');
-            const params = {};
-            
-            if (queryString) {
-                queryString.split('&').forEach(param => {
-                    const [key, value] = param.split('=');
-                    params[key] = decodeURIComponent(value);
-                });
-            }
-            
-            renderPage(page, params);
-            
-        } catch (error) {
-            console.error('Erro ao processar link:', error);
-            renderPage('home'); // Fallback para home
-        }
-    };
-
-    // ========== RENDERIZAÇÃO DE PÁGINAS - MELHORADA ==========
-    const renderPage = (pageName, params = {}) => {
-        if (isLoading) return;
-        
-        currentPage = pageName;
-        
-        try {
-            if (pageName === 'home') {
-                renderHomePage();
-            } else if (pageName === 'noticia-completa') {
-                renderNoticiaCompleta(params.id);
-            } else if (pageName.startsWith('categoria-')) {
-                const categoria = pageName.replace('categoria-', '').replace('-', ' ');
-                renderCategoria(categoria);
-            } else {
-                // Página não encontrada
-                elements.mainContentArea.innerHTML = `
-                    <div class="page-not-found">
-                        <h1>Página Não Encontrada</h1>
-                        <p>A página que você procura não existe.</p>
-                        <a href="#home" class="button-primary">Voltar ao Início</a>
-                    </div>
-                `;
-            }
-            
-            addLinkInterceptors();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            
-            // Fechar menu mobile
-            if (window.innerWidth <= 768) {
-                elements.menuLista.classList.remove('active');
-                AccessibilityManager.updateAriaExpanded(elements.menuHamburguer, false);
-            }
-            
-        } catch (error) {
-            console.error(`Erro ao renderizar página ${pageName}:`, error);
-            ErrorManager.show('Erro ao carregar a página');
-        }
-    };
-
-    // ========== ATUALIZAR DATA ATUAL - NOVO ==========
-    function updateCurrentDate() {
-        if (elements.dataAtual) {
-            const now = new Date();
-            const options = {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            };
-            
-            const dateString = now.toLocaleDateString('pt-BR', options);
-            elements.dataAtual.textContent = dateString;
-        }
     }
 
     // ========== EVENT LISTENERS - MELHORADOS ==========
@@ -1183,7 +1219,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Aqui você pode integrar com Google Analytics, etc.
         console.log(`Página visitada: ${page}`);
         
-        // Exemplo básico de tracking local (removido localStorage para evitar problemas)
+        // Exemplo básico de tracking local
         try {
             if (typeof Storage !== 'undefined') {
                 const views = JSON.parse(localStorage.getItem('pageViews') || '{}');
@@ -1245,7 +1281,7 @@ window.compartilharWhatsapp = (newsId) => {
     window.open(`https://wa.me/?text=${text}`, '_blank');
 };
 
-// ========== ESTILOS ADICIONAIS PARA COMPONENTES NOVOS - CSS INLINE ==========
+// ========== ESTILOS ADICIONAIS PARA COMPONENTES NOVOS ==========
 const additionalStyles = `
     <style>
     .search-results {
@@ -1422,4 +1458,4 @@ if (document.readyState === 'loading') {
     });
 } else {
     document.head.insertAdjacentHTML('beforeend', additionalStyles);
-}
+}s

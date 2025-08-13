@@ -982,17 +982,69 @@ img[loading="lazy"] {
     color: rgba(255, 255, 255, 0.8);
 }
 
+/* REDES SOCIAIS DO RODAPÉ - LAYOUT HORIZONTAL DESKTOP (CONSISTENTE COM CABEÇALHO) */
 .redes-sociais-footer {
     margin-top: 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
 }
 
 .redes-sociais-footer a {
     color: var(--white); /* CONFIRMADO - TEXTO BRANCO */
     font-size: 1.3rem;
-    margin-right: 0.9375rem;
-    padding: 0.3125rem;
-    transition: color var(--transition-fast);
-    display: inline-block;
+    padding: 0.5rem;
+    margin-right: 0; /* Remove margin individual para usar gap */
+    transition: all var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    min-height: 40px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.redes-sociais-footer a:hover,
+.redes-sociais-footer a:focus {
+    color: var(--primary-color);
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+/* ========== MOBILE - REDES SOCIAIS RODAPÉ (IGUAL CABEÇALHO) ========== */
+@media (max-width: 768px) {
+    /* GRID COMPACTO 3x2 - MESMA REGRA DO CABEÇALHO */
+    .redes-sociais-footer {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        width: 100%;
+        max-width: 180px;
+        justify-items: center;
+        margin: 1rem auto 0 auto; /* Centraliza no mobile */
+    }
+
+    .redes-sociais-footer a {
+        font-size: 1rem;
+        min-width: 36px !important;
+        min-height: 36px !important;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.15);
+        margin-right: 0 !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all var(--transition-fast);
+    }
+
+    .redes-sociais-footer a:hover,
+    .redes-sociais-footer a:focus {
+        background: rgba(255, 255, 255, 0.25);
+        transform: translateY(-1px);
+    }
 }
 
 .redes-sociais-footer a:hover,
@@ -2109,6 +2161,185 @@ tr:hover {
 
 .slide-in-left {
     animation: slideInLeft 0.6s ease-out;
+}
+
+/* ====== PLAYER DE RÁDIO INTEGRADO ====== */
+.radio-player-compact {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 3px 10px;
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(8px);
+    transition: all 0.3s ease;
+    margin-right: 10px;
+}
+
+.radio-player-compact:hover {
+    background: rgba(0, 0, 0, 0.35);
+    transform: scale(1.02);
+}
+
+.radio-logo {
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.radio-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.radio-info-compact {
+    display: flex;
+    flex-direction: column;
+    min-width: 75px;
+}
+
+.radio-name-compact {
+    font-size: 10px;
+    font-weight: 600;
+    color: #ffffff;
+    line-height: 1.1;
+    margin: 0;
+}
+
+.radio-status {
+    font-size: 8px;
+    color: #bdc3c7;
+    line-height: 1;
+    margin: 0;
+}
+
+.radio-controls-compact {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.control-btn-compact {
+    background: none;
+    border: none;
+    color: #ffffff;
+    cursor: pointer;
+    padding: 3px;
+    border-radius: 3px;
+    font-size: 9px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+}
+
+.control-btn-compact:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #3498db;
+}
+
+.play-btn-compact {
+    background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+    color: white;
+    font-size: 10px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+}
+
+.play-btn-compact:hover {
+    background: linear-gradient(135deg, #a93226 0%, #922b21 100%);
+    transform: scale(1.1);
+}
+
+.volume-compact {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.volume-slider-compact {
+    width: 35px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 1px;
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+}
+
+.volume-slider-compact::-webkit-slider-thumb {
+    appearance: none;
+    width: 8px;
+    height: 8px;
+    background: #c0392b;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.volume-slider-compact::-moz-range-thumb {
+    width: 8px;
+    height: 8px;
+    background: #c0392b;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+.status-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #27ae60;
+    animation: pulse-compact 2s infinite;
+}
+
+@keyframes pulse-compact {
+    0% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.7); }
+    70% { box-shadow: 0 0 0 3px rgba(39, 174, 96, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0); }
+}
+
+/* Estados do player */
+.radio-player-compact.playing .play-btn-compact i:before {
+    content: "\f04c";
+}
+
+.radio-player-compact.loading .status-dot {
+    background: #f39c12;
+    animation: none;
+}
+
+.radio-player-compact.error .status-dot {
+    background: #e74c3c;
+    animation: none;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .radio-info-compact {
+        display: none;
+    }
+    
+    .volume-compact {
+        display: none;
+    }
+    
+    .radio-player-compact {
+        padding: 3px 6px;
+        gap: 5px;
+    }
+}
+
+/* Audio element oculto */
+#radioAudio {
+    display: none;
 }
 
 /* ========== FINAL DO CSS ========== */

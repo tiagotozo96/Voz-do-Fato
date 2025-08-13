@@ -1458,4 +1458,258 @@ if (document.readyState === 'loading') {
     });
 } else {
     document.head.insertAdjacentHTML('beforeend', additionalStyles);
-}s
+}
+
+// ====== PLAYER DE RÁDIO INTEGRADO ======
+class CompactRadioPlayer {
+    constructor() {
+        // Aguarda o DOM estar pronto
+        this.initWhenReady();
+    }
+    
+    initWhenReady() {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.init());
+        } else {
+            this.init();
+        }
+    }
+    
+    init() {
+        // Elementos do DOM
+        this.audio = document.getElementById('radioAudio');
+        this.playBtn = document.getElementById('playBtnCompact');
+        this.volumeSlider = document.getElementById('volumeSliderCompact');
+        this.volumeBtn = document.getElementById('volumeBtnCompact');
+        this.statusDot = document.getElementById('statusDot');
+        this.radioPlayer = document.getElementById('radioPlayerCompact');
+        this.radioStatus = document.getElementById('radioStatusCompact');
+        this.radioName = document.getElementById('radioNameCompact');
+        this.radioLogo = document.getElementById('radioLogoCompact');
+        
+        // Verifica se os elementos existem
+        if (!this.audio || !this.playBtn) {
+            console.warn('Elementos do player de rádio não encontrados');
+            return;
+        }
+        
+        // Estados do player
+        this.isPlaying = false;
+        this.isMuted = false;
+        this.previousVolume = 50;
+        this.currentStation = 0;
+        
+        // Configuração das estações de rádio
+        this.stations = [
+    {
+        name: "CBN São Paulo",
+        url: "https://stream-uk1.radioparadise.com/mp3-192",
+        logo: "https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/voz-do-fato.png"
+    },
+    {
+        name: "CBN Rio de Janeiro", 
+        url: "https://stream-uk1.radioparadise.com/mp3-192",
+        logo: "https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/voz-do-fato.png"
+    },
+    {
+        name: "Rádio Globo SP",
+        url: "https://stream-uk1.radioparadise.com/mp3-192",
+        logo: "https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/voz-do-fato.png"
+    }
+];
+        
+        this.setupEventListeners();
+        this.loadStation(0);
+        this.updateStatus('Offline');
+    }
+    
+    setupEventListeners() {
+        // Play/Pause
+        this.playBtn?.addEventListener('click', () => {
+            this.togglePlayPause();
+        });
+        
+        // Volume
+        this.volumeSlider?.addEventListener('input', (e) => {
+            this.setVolume(e.target.value);
+        });
+        
+        this.volumeBtn?.addEventListener('click', () => {
+            this.toggleMute();
+        });
+        
+        // Navigation
+        document.getElementById('prevBtnCompact')?.addEventListener('click', () => {
+            this.previousStation();
+        });
+        
+        document.getElementById('nextBtnCompact')?.addEventListener('click', () => {
+            this.nextStation();
+        });
+        
+        // Audio events
+        if (this.audio) {
+            this.audio.addEventListener('loadstart', () => {
+                this.updateStatus('Conectando...');
+                this.radioPlayer?.classList.add('loading');
+            });
+            
+            this.audio.addEventListener('canplay', () => {
+                this.updateStatus('Pronto');
+                this.radioPlayer?.classList.remove('loading', 'error');
+            });
+            
+            this.audio.addEventListener('playing', () => {
+                this.updateStatus('Ao Vivo');
+                this.radioPlayer?.classList.remove('loading', 'error');
+                this.radioPlayer?.classList.add('playing');
+            });
+            
+            this.audio.addEventListener('pause', () => {
+                this.updateStatus('Pausado');
+                this.radioPlayer?.classList.remove('playing');
+            });
+            
+            this.audio.addEventListener('error', (e) => {
+                console.error('Erro no áudio:', e);
+                this.updateStatus('Erro');
+                this.radioPlayer?.classList.add('error');
+                this.radioPlayer?.classList.remove('loading', 'playing');
+            });
+            
+            this.audio.addEventListener('waiting', () => {
+                this.updateStatus('Carregando...');
+            });
+        }
+    }
+    
+    async togglePlayPause() {
+        try {
+            if (this.isPlaying) {
+                this.audio.pause();
+                this.isPlaying = false;
+                if (this.playBtn) {
+                    this.playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                }
+            } else {
+                if (this.audio.src) {
+                    await this.audio.play();
+                    this.isPlaying = true;
+                    if (this.playBtn) {
+                        this.playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao reproduzir:', error);
+            this.updateStatus('Erro');
+            // Tentar novamente após um breve delay
+            setTimeout(() => {
+                if (!this.isPlaying) {
+                    this.loadStation(this.currentStation);
+                }
+            }, 2000);
+        }
+    }
+    
+    setVolume(value) {
+        if (this.audio) {
+            this.audio.volume = value / 100;
+        }
+        this.updateVolumeIcon();
+    }
+    
+    toggleMute() {
+        if (this.isMuted) {
+            this.volumeSlider.value = this.previousVolume;
+            this.setVolume(this.previousVolume);
+            this.isMuted = false;
+        } else {
+            this.previousVolume = this.volumeSlider.value;
+            this.setVolume(0);
+            this.volumeSlider.value = 0;
+            this.isMuted = true;
+        }
+    }
+    
+    updateVolumeIcon() {
+        const volume = this.volumeSlider?.value || 50;
+        const icon = this.volumeBtn?.querySelector('i');
+        
+        if (icon) {
+            if (volume == 0) {
+                icon.className = 'fas fa-volume-mute';
+            } else if (volume < 50) {
+                icon.className = 'fas fa-volume-down';
+            } else {
+                icon.className = 'fas fa-volume-up';
+            }
+        }
+    }
+    
+    loadStation(index) {
+        if (index >= 0 && index < this.stations.length) {
+            const station = this.stations[index];
+            
+            if (this.radioName) {
+                this.radioName.textContent = station.name;
+            }
+            if (this.radioLogo) {
+                this.radioLogo.src = station.logo;
+                this.radioLogo.alt = station.name;
+            }
+            if (this.audio) {
+                this.audio.src = station.url;
+                this.audio.load();
+            }
+            
+            this.currentStation = index;
+            this.updateStatus('Carregado');
+        }
+    }
+    
+    previousStation() {
+        const prevIndex = this.currentStation > 0 
+            ? this.currentStation - 1 
+            : this.stations.length - 1;
+        
+        const wasPlaying = this.isPlaying;
+        if (wasPlaying) {
+            this.audio.pause();
+            this.isPlaying = false;
+        }
+        
+        this.loadStation(prevIndex);
+        
+        if (wasPlaying) {
+            setTimeout(() => this.togglePlayPause(), 500);
+        }
+    }
+    
+    nextStation() {
+        const nextIndex = this.currentStation < this.stations.length - 1 
+            ? this.currentStation + 1 
+            : 0;
+            
+        const wasPlaying = this.isPlaying;
+        if (wasPlaying) {
+            this.audio.pause();
+            this.isPlaying = false;
+        }
+        
+        this.loadStation(nextIndex);
+        
+        if (wasPlaying) {
+            setTimeout(() => this.togglePlayPause(), 500);
+        }
+    }
+    
+    updateStatus(status) {
+        if (this.radioStatus) {
+            this.radioStatus.textContent = status;
+        }
+    }
+}
+
+// Inicializar o player de rádio
+const radioPlayer = new CompactRadioPlayer();

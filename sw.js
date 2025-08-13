@@ -17,7 +17,12 @@ self.addEventListener('install', (event) => {
         caches.open(CACHE_NAME)
             .then((cache) => {
                 console.log('Cache aberto');
-                return cache.addAll(urlsToCache);
+                return Promise.allSettled(
+      urlsToCache.map(url => fetch(url).then(r => {
+        if (!r.ok) throw new Error('bad response');
+        return cache.put(url, r.clone());
+      }))
+    );
             })
     );
 });

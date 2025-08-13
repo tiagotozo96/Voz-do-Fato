@@ -27,7 +27,7 @@
     <meta name="theme-color" content="#c0392b">
     <link rel="icon" href="https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/voz-do-fato.png" type="image/png">
     
-    <title>Voz do Fato - Portal de Notícias</title>
+    <title>Voz do Fato - Portal de Notícias </title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     
@@ -87,11 +87,51 @@
                         <i class="fab fa-whatsapp" aria-hidden="true"></i>
                     </a>
                 </div>
-                <div class="top-social-info">
-                    <span class="data-atual" id="data-atual">carregando data...</span>
-                    <a href="#arquivo" aria-label="Acesse o arquivo de notícias">ARQUIVO DO FATO</a>
-                    <a href="#contato" aria-label="Entre em contato conosco">FALE CONOSCO</a>
-                </div>
+                
+                <!-- PLAYER DE RÁDIO - Adicione isso dentro da div "top-social-info" -->
+<div class="radio-player-compact" id="radioPlayerCompact">
+    <div class="radio-logo">
+        <img src="https://raw.githubusercontent.com/tiagotozo96/Voz-do-Fato/master/imagens/voz-do-fato.png" 
+             alt="Rádio Voz do Fato" 
+             id="radioLogoCompact">
+    </div>
+    
+    <div class="radio-info-compact">
+        <p class="radio-name-compact" id="radioNameCompact">Rádio Voz do Fato</p>
+        <p class="radio-status" id="radioStatusCompact">Offline</p>
+    </div>
+    
+    <div class="radio-controls-compact">
+        <button class="control-btn-compact" id="prevBtnCompact" aria-label="Estação anterior">
+            <i class="fas fa-step-backward"></i>
+        </button>
+        
+        <button class="control-btn-compact play-btn-compact" id="playBtnCompact" aria-label="Play/Pause">
+            <i class="fas fa-play"></i>
+        </button>
+        
+        <button class="control-btn-compact" id="nextBtnCompact" aria-label="Próxima estação">
+            <i class="fas fa-step-forward"></i>
+        </button>
+    </div>
+    
+    <div class="volume-compact">
+        <button class="control-btn-compact" id="volumeBtnCompact" aria-label="Controle de volume">
+            <i class="fas fa-volume-up"></i>
+        </button>
+        <input type="range" 
+               class="volume-slider-compact" 
+               id="volumeSliderCompact" 
+               min="0" 
+               max="100" 
+               value="50"
+               aria-label="Volume">
+    </div>
+    
+    <div class="status-dot" id="statusDot"></div>
+</div>
+
+
             </div>
         </div>
         
@@ -323,5 +363,9 @@
     </div>
 </div>
 
+<audio id="radioAudio" preload="none"></audio>
+
+<span id="data-atual" style="display:none;"></span>
+<span id="dataAtual" style="display:none;"></span>
 </body>
 </html>
